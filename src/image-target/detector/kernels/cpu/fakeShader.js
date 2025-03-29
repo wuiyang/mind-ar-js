@@ -1,4 +1,46 @@
-import {zeros,map, flatten as mathjsflatten} from 'mathjs'
+import { memoize } from '../../../utils/memo';
+
+function deepFlatten(arr, out = []) {
+    for (let i = 0; i < arr.length; i++) {
+        const val = arr[i];
+        if (Array.isArray(val)) {
+            deepFlatten(val, out);
+        } else {
+            out.push(val);
+        }
+    }
+    return out;
+}
+
+const getAllDimensionIndexInternal = memoize(
+        (dimensions, index = 0) => {
+        const output = [];
+        const dimension = dimensions[index];
+
+        if (index >= dimensions.length - 1) {
+            for (let i = 0; i < dimension; i++) {
+                output[i] = [i];
+            }
+        } else {
+            const restDimension = getAllDimensionIndexInternal(dimensions, index + 1);
+            for (let i = 0; i < dimension; i++) {
+                for (let ri = 0; ri < restDimension.length; ri++) {
+                    output.push([i].concat(restDimension[ri]));
+                }
+            }
+        }
+
+        return output;
+    },
+    (dimension, index) => dimension.slice(index).join("-"),
+);
+
+function getAllDimensionIndex(dimensions) {
+    const result = getAllDimensionIndexInternal(dimensions);
+    // make a copy to prevent overwritten cache
+    return result.map(value => value.slice());
+}
+
 /**
  * @typedef {Object} Kernel
  * @property {string[]} variableNames
@@ -32,11 +74,7 @@ function runCode(backend, kernel, inputs, dtype) {
     });
     tempData.int=Math.trunc;
     tempData.atan=Math.atan2;
-    //create an empty matrix to map the output size, because i'm lazy and want to use Matrix.map(...)
-    //const temp = new Matrix();
-    //console.log("Creating output shape:",kernel.outputShape);
-    const temp=zeros(kernel.outputShape);//reshape([0,0,0],kernel.outputShape);
-    const output = map(temp,(value, index,matrix) => {
+    const output = getAllDimensionIndex(kernel.outputShape).map((index) => {
         
         tempData.getOutputCoords = () => { return index; }
         let out;
@@ -50,7 +88,7 @@ function runCode(backend, kernel, inputs, dtype) {
     //output.flat()
     //convert the output from a matrix into a tensor
     
-    return backend.makeOutput(mathjsflatten(output), kernel.outputShape, dtype);
+    return backend.makeOutput(deepFlatten(output), kernel.outputShape, dtype);
 }
 
 /**
