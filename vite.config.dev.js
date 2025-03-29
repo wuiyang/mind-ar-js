@@ -1,7 +1,7 @@
 import {defineConfig,build} from 'vite'
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import basicSsl from '@vitejs/plugin-basic-ssl'
+// import basicSsl from '@vitejs/plugin-basic-ssl'
 
 const outDir = 'dist-dev'
 
@@ -9,9 +9,9 @@ const moduleConfig={
     mode: 'development',
     assetsInclude:'**/*.html',
     base:'./',
-    plugins:[
-        basicSsl()
-    ],
+    // plugins:[
+    //     basicSsl()
+    // ],
     build: {
         outDir: outDir,
         emptyOutDir:false,
