@@ -1,6 +1,7 @@
 import { resize } from "./utils/images.js";
 
 const MIN_IMAGE_PIXEL_SIZE = 100;
+const CBRT_TWO = Math.pow(2.0, 1.0 / 3.0);
 
 // Build a list of image {data, width, height, scale} with different scales
 const buildImageList = (inputImage) => {
@@ -10,7 +11,7 @@ const buildImageList = (inputImage) => {
   let c = minScale;
   while (true) {
     scaleList.push(c);
-    c *= Math.pow(2.0, 1.0 / 3.0);
+    c *= CBRT_TWO;
     if (c >= 0.95) {
       c = 1;
       break;

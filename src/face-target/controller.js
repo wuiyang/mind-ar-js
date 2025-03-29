@@ -4,6 +4,7 @@ import { Estimator } from "./face-geometry/estimator.js";
 import { createThreeFaceGeometry as _createThreeFaceGeometry } from "./face-geometry/face-geometry.js";
 import { positions as canonicalMetricLandmarks } from "./face-geometry/face-data.js";
 import { OneEuroFilter } from "../libs/one-euro-filter.js";
+import { runOnEveryFrame } from "../image-target/utils/frame.js";
 
 const DEFAULT_FILTER_CUTOFF = 0.001; // 1Hz. time period in milliseconds
 const DEFAULT_FILTER_BETA = 1;
@@ -17,6 +18,11 @@ class Controller {
     this.filterBeta = filterBeta === null ? DEFAULT_FILTER_BETA : filterBeta;
     this.onUpdate = onUpdate;
     this.flipFace = false;
+
+    /** @type {HTMLCanvasElement} */
+    this.flippedCanvasElement = undefined;
+    /** @type {CanvasRenderingContext2D} */
+    this.flippedInputContext = undefined;
 
     // console.log("filter", this.filterMinCF, this.filterBeta);
 
@@ -55,82 +61,82 @@ class Controller {
   processVideo(input) {
     if (this.processingVideo) return;
 
-    const flippedCanvasElement = document.createElement("canvas");
-    flippedCanvasElement.width = input.width;
-    flippedCanvasElement.height = input.height;
-    const flippedInputContext = flippedCanvasElement.getContext("2d");
+    this.flippedCanvasElement ??= document.createElement("canvas");
+    this.flippedCanvasElement.width = input.width;
+    this.flippedCanvasElement.height = input.height;
+    this.flippedInputContext ??= this.flippedCanvasElement.getContext("2d");
 
     this.processingVideo = true;
+    runOnEveryFrame(
+      () => this._doProcess(input),
+      () => this.processingVideo,
+    );
+  }
 
-    const doProcess = async () => {
-      let results;
+  async _doProcess(input) {
+    let results;
 
-      if (this.flipFace) {
-        flippedInputContext.clearRect(0, 0, flippedCanvasElement.width, flippedCanvasElement.height);
-        flippedInputContext.save();
-        flippedInputContext.translate(flippedCanvasElement.width, 0);
-        flippedInputContext.scale(-1, 1);
-        flippedInputContext.drawImage(input, 0, 0, flippedCanvasElement.width, flippedCanvasElement.height);
-        flippedInputContext.restore();
-        results = await this.faceMeshHelper.detect(flippedCanvasElement);
+    if (this.flipFace) {
+      this.flippedInputContext.clearRect(0, 0, this.flippedCanvasElement.width, this.flippedCanvasElement.height);
+      this.flippedInputContext.save();
+      this.flippedInputContext.translate(this.flippedCanvasElement.width, 0);
+      this.flippedInputContext.scale(-1, 1);
+      this.flippedInputContext.drawImage(input, 0, 0, this.flippedCanvasElement.width, this.flippedCanvasElement.height);
+      this.flippedInputContext.restore();
+      results = await this.faceMeshHelper.detect(this.flippedCanvasElement);
+    } else {
+      results = await this.faceMeshHelper.detect(input);
+    }
+
+    if (results.faceLandmarks.length === 0) {
+      this.lastEstimateResult = null;
+      this.onUpdate({ hasFace: false });
+
+      for (let i = 0; i < this.landmarkFilters.length; i++) {
+        this.landmarkFilters[i].reset();
+      }
+      this.faceMatrixFilter.reset();
+      this.faceScaleFilter.reset();
+    } else {
+      const landmarks = results.faceLandmarks[0].map((l) => {
+        return [l.x, l.y, l.z];
+      });
+      const estimateResult = this.estimator.estimate(landmarks);
+
+      if (this.lastEstimateResult === null) {
+        this.lastEstimateResult = estimateResult;
       } else {
-        results = await this.faceMeshHelper.detect(input);
+        const lastMetricLandmarks = this.lastEstimateResult.metricLandmarks;
+        // const lastFaceMatrix = this.lastEstimateResult.faceMatrix;
+        // const lastFaceScale = this.lastEstimateResult.faceScale;
+
+        const newMetricLandmarks = [];
+        for (let i = 0; i < lastMetricLandmarks.length; i++) {
+          newMetricLandmarks[i] = this.landmarkFilters[i].filter(Date.now(), estimateResult.metricLandmarks[i]);
+        }
+
+        const newFaceMatrix = this.faceMatrixFilter.filter(Date.now(), estimateResult.faceMatrix);
+
+        const newFaceScale = this.faceScaleFilter.filter(Date.now(), [estimateResult.faceScale]);
+
+        this.lastEstimateResult = {
+          metricLandmarks: newMetricLandmarks,
+          faceMatrix: newFaceMatrix,
+          faceScale: newFaceScale[0],
+          blendshapes: results.faceBlendshapes[0],
+        };
       }
 
-      if (results.faceLandmarks.length === 0) {
-        this.lastEstimateResult = null;
-        this.onUpdate({ hasFace: false });
-
-        for (let i = 0; i < this.landmarkFilters.length; i++) {
-          this.landmarkFilters[i].reset();
-        }
-        this.faceMatrixFilter.reset();
-        this.faceScaleFilter.reset();
-      } else {
-        const landmarks = results.faceLandmarks[0].map((l) => {
-          return [l.x, l.y, l.z];
-        });
-        const estimateResult = this.estimator.estimate(landmarks);
-
-        if (this.lastEstimateResult === null) {
-          this.lastEstimateResult = estimateResult;
-        } else {
-          const lastMetricLandmarks = this.lastEstimateResult.metricLandmarks;
-          // const lastFaceMatrix = this.lastEstimateResult.faceMatrix;
-          // const lastFaceScale = this.lastEstimateResult.faceScale;
-
-          const newMetricLandmarks = [];
-          for (let i = 0; i < lastMetricLandmarks.length; i++) {
-            newMetricLandmarks[i] = this.landmarkFilters[i].filter(Date.now(), estimateResult.metricLandmarks[i]);
-          }
-
-          const newFaceMatrix = this.faceMatrixFilter.filter(Date.now(), estimateResult.faceMatrix);
-
-          const newFaceScale = this.faceScaleFilter.filter(Date.now(), [estimateResult.faceScale]);
-
-          this.lastEstimateResult = {
-            metricLandmarks: newMetricLandmarks,
-            faceMatrix: newFaceMatrix,
-            faceScale: newFaceScale[0],
-            blendshapes: results.faceBlendshapes[0],
-          };
-        }
-
-        // console.log("resuts", results);
-        // console.log("estimateResult", estimateResult);
-        if (this.onUpdate) {
-          this.onUpdate({ hasFace: true, estimateResult: this.lastEstimateResult });
-        }
-
-        for (let i = 0; i < this.customFaceGeometries.length; i++) {
-          this.customFaceGeometries[i].updatePositions(estimateResult.metricLandmarks);
-        }
+      // console.log("resuts", results);
+      // console.log("estimateResult", estimateResult);
+      if (this.onUpdate) {
+        this.onUpdate({ hasFace: true, estimateResult: this.lastEstimateResult });
       }
-      if (this.processingVideo) {
-        window.requestAnimationFrame(doProcess);
+
+      for (let i = 0; i < this.customFaceGeometries.length; i++) {
+        this.customFaceGeometries[i].updatePositions(estimateResult.metricLandmarks);
       }
-    };
-    window.requestAnimationFrame(doProcess);
+    }
   }
 
   stopProcessVideo() {

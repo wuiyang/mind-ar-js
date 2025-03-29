@@ -7,6 +7,7 @@ import { CropDetector } from "./detector/crop-detector.js";
 import { Compiler } from "./compiler.js";
 import { InputLoader } from "./input-loader.js";
 import { OneEuroFilter } from "../libs/one-euro-filter.js";
+import { runOnEveryFrame } from "./utils/frame.js";
 
 const DEFAULT_FILTER_CUTOFF = 0.001; // 1Hz. time period in milliseconds
 const DEFAULT_FILTER_BETA = 1000;
@@ -176,103 +177,104 @@ class Controller {
       });
       // console.log("filterMinCF", this.filterMinCF, this.filterBeta);
     }
+    runOnEveryFrame(
+      () => this._startProcessing(input),
+      () => this.processingVideo,
+    );
+  }
 
-    const startProcessing = async () => {
-      while (true) {
-        if (!this.processingVideo) break;
+  async _startProcessing(input) {
+    if (!this.processingVideo) return;
 
-        const inputT = this.inputLoader.loadInput(input);
+    const inputT = this.inputLoader.loadInput(input);
 
-        const nTracking = this.trackingStates.reduce((acc, s) => {
-          return acc + (s.isTracking ? 1 : 0);
-        }, 0);
+    const nTracking = this.trackingStates.reduce((acc, s) => {
+      return acc + (s.isTracking ? 1 : 0);
+    }, 0);
 
-        // detect and match only if less then maxTrack
-        if (nTracking < this.maxTrack) {
-          const matchingIndexes = [];
-          for (let i = 0; i < this.trackingStates.length; i++) {
-            const trackingState = this.trackingStates[i];
-            if (trackingState.isTracking === true) continue;
-            if (this.interestedTargetIndex !== -1 && this.interestedTargetIndex !== i) continue;
+    // detect and match only if less then maxTrack
+    if (nTracking < this.maxTrack) {
+      const matchingIndexes = [];
+      for (let i = 0; i < this.trackingStates.length; i++) {
+        const trackingState = this.trackingStates[i];
+        if (trackingState.isTracking === true) continue;
+        if (this.interestedTargetIndex !== -1 && this.interestedTargetIndex !== i) continue;
 
-            matchingIndexes.push(i);
-          }
-
-          const { targetIndex: matchedTargetIndex, modelViewTransform } = await this._detectAndMatch(inputT, matchingIndexes);
-
-          if (matchedTargetIndex !== -1) {
-            this.trackingStates[matchedTargetIndex].isTracking = true;
-            this.trackingStates[matchedTargetIndex].currentModelViewTransform = modelViewTransform;
-          }
-        }
-
-        // tracking update
-        for (let i = 0; i < this.trackingStates.length; i++) {
-          const trackingState = this.trackingStates[i];
-
-          if (trackingState.isTracking) {
-            let modelViewTransform = await this._trackAndUpdate(inputT, trackingState.currentModelViewTransform, i);
-            if (modelViewTransform === null) {
-              trackingState.isTracking = false;
-            } else {
-              trackingState.currentModelViewTransform = modelViewTransform;
-            }
-          }
-
-          // if not showing, then show it once it reaches warmup number of frames
-          if (!trackingState.showing) {
-            if (trackingState.isTracking) {
-              trackingState.trackMiss = 0;
-              trackingState.trackCount += 1;
-              if (trackingState.trackCount > this.warmupTolerance) {
-                trackingState.showing = true;
-                trackingState.trackingMatrix = null;
-                trackingState.filter.reset();
-              }
-            }
-          }
-
-          // if showing, then count miss, and hide it when reaches tolerance
-          if (trackingState.showing) {
-            if (!trackingState.isTracking) {
-              trackingState.trackCount = 0;
-              trackingState.trackMiss += 1;
-
-              if (trackingState.trackMiss > this.missTolerance) {
-                trackingState.showing = false;
-                trackingState.trackingMatrix = null;
-                this.onUpdate && this.onUpdate({ type: "updateMatrix", targetIndex: i, worldMatrix: null });
-              }
-            } else {
-              trackingState.trackMiss = 0;
-            }
-          }
-
-          // if showing, then call onUpdate, with world matrix
-          if (trackingState.showing) {
-            const worldMatrix = this._glModelViewMatrix(trackingState.currentModelViewTransform, i);
-            trackingState.trackingMatrix = trackingState.filter.filter(Date.now(), worldMatrix);
-
-            let clone = [];
-            for (let j = 0; j < trackingState.trackingMatrix.length; j++) {
-              clone[j] = trackingState.trackingMatrix[j];
-            }
-
-            const isInputRotated = input.width === this.inputHeight && input.height === this.inputWidth;
-            if (isInputRotated) {
-              clone = this.getRotatedZ90Matrix(clone);
-            }
-
-            this.onUpdate && this.onUpdate({ type: "updateMatrix", targetIndex: i, worldMatrix: clone });
-          }
-        }
-
-        inputT.dispose();
-        this.onUpdate && this.onUpdate({ type: "processDone" });
-        await tf.nextFrame();
+        matchingIndexes.push(i);
       }
-    };
-    startProcessing();
+
+      const { targetIndex: matchedTargetIndex, modelViewTransform } = await this._detectAndMatch(inputT, matchingIndexes);
+
+      if (matchedTargetIndex !== -1) {
+        this.trackingStates[matchedTargetIndex].isTracking = true;
+        this.trackingStates[matchedTargetIndex].currentModelViewTransform = modelViewTransform;
+      }
+    }
+
+    // tracking update
+    for (let i = 0; i < this.trackingStates.length; i++) {
+      const trackingState = this.trackingStates[i];
+
+      if (trackingState.isTracking) {
+        let modelViewTransform = await this._trackAndUpdate(inputT, trackingState.currentModelViewTransform, i);
+        if (modelViewTransform === null) {
+          trackingState.isTracking = false;
+        } else {
+          trackingState.currentModelViewTransform = modelViewTransform;
+        }
+      }
+
+      // if not showing, then show it once it reaches warmup number of frames
+      if (!trackingState.showing) {
+        if (trackingState.isTracking) {
+          trackingState.trackMiss = 0;
+          trackingState.trackCount += 1;
+          if (trackingState.trackCount > this.warmupTolerance) {
+            trackingState.showing = true;
+            trackingState.trackingMatrix = null;
+            trackingState.filter.reset();
+          }
+        }
+      }
+
+      // if showing, then count miss, and hide it when reaches tolerance
+      if (trackingState.showing) {
+        if (!trackingState.isTracking) {
+          trackingState.trackCount = 0;
+          trackingState.trackMiss += 1;
+
+          if (trackingState.trackMiss > this.missTolerance) {
+            trackingState.showing = false;
+            trackingState.trackingMatrix = null;
+            this.onUpdate && this.onUpdate({ type: "updateMatrix", targetIndex: i, worldMatrix: null });
+          }
+        } else {
+          trackingState.trackMiss = 0;
+        }
+      }
+
+      // if showing, then call onUpdate, with world matrix
+      if (trackingState.showing) {
+        const worldMatrix = this._glModelViewMatrix(trackingState.currentModelViewTransform, i);
+        trackingState.trackingMatrix = trackingState.filter.filter(Date.now(), worldMatrix);
+
+        let clone = [];
+        for (let j = 0; j < trackingState.trackingMatrix.length; j++) {
+          clone[j] = trackingState.trackingMatrix[j];
+        }
+
+        const isInputRotated = input.width === this.inputHeight && input.height === this.inputWidth;
+        if (isInputRotated) {
+          clone = this.getRotatedZ90Matrix(clone);
+        }
+
+        this.onUpdate && this.onUpdate({ type: "updateMatrix", targetIndex: i, worldMatrix: clone });
+      }
+    }
+
+    inputT.dispose();
+    this.onUpdate && this.onUpdate({ type: "processDone" });
+    await tf.nextFrame();
   }
 
   stopProcessVideo() {
