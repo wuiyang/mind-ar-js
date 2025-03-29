@@ -2,7 +2,7 @@ const kHoughBinDelta = 1;
 
 // mathces [querypointIndex:x, keypointIndex: x]
 const computeHoughMatches = (options) => {
-  const {keywidth, keyheight, querywidth, queryheight, matches} = options;
+  const { keywidth, keyheight, querywidth, queryheight, matches } = options;
 
   const maxX = querywidth * 1.2;
   const minX = -maxX;
@@ -25,13 +25,13 @@ const computeHoughMatches = (options) => {
     const keyscale = matches[i].keypoint.scale;
     if (keyscale == 0) console.log("ERROR divide zero");
     const scale = queryscale / keyscale;
-    projectedDims.push( scale * maxDim );
+    projectedDims.push(scale * maxDim);
   }
 
   // TODO optimize median
   //   weird. median should be [Math.floor(projectedDims.length/2) - 1] ?
-  projectedDims.sort((a1, a2) => {return a1 - a2});
-  const medianProjectedDim = projectedDims[ Math.floor(projectedDims.length/2) - (projectedDims.length%2==0?1:0) -1 ];
+  projectedDims.sort((a1, a2) => a1 - a2);
+  const medianProjectedDim = projectedDims[Math.floor(projectedDims.length / 2) - (projectedDims.length % 2 == 0 ? 1 : 0) - 1];
 
   const binSize = 0.25 * medianProjectedDim;
   const numXBins = Math.max(5, Math.ceil((maxX - minX) / binSize));
@@ -48,7 +48,7 @@ const computeHoughMatches = (options) => {
     const querypoint = matches[i].querypoint;
     const keypoint = matches[i].keypoint;
 
-    const {x, y, scale, angle} = _mapCorrespondence({querypoint, keypoint, keycenterX, keycenterY, scaleOneOverLogK});
+    const { x, y, scale, angle } = _mapCorrespondence({ querypoint, keypoint, keycenterX, keycenterY, scaleOneOverLogK });
 
     // Check that the vote is within range
     if (x < minX || x >= maxX || y < minY || y >= maxY || angle <= -Math.PI || angle > Math.PI || scale < minScale || scale >= maxScale) {
@@ -62,7 +62,7 @@ const computeHoughMatches = (options) => {
     let fbinAngle = numAngleBins * (angle + Math.PI) / (2.0 * Math.PI);
     let fbinScale = numScaleBins * (scale - minScale) / (maxScale - minScale);
 
-    querypointBinLocations[i] = {binX: fbinX, binY: fbinY, binAngle: fbinAngle, binScale: fbinScale};
+    querypointBinLocations[i] = { binX: fbinX, binY: fbinY, binAngle: fbinAngle, binScale: fbinScale };
 
     let binX = Math.floor(fbinX - 0.5);
     let binY = Math.floor(fbinY - 0.5);
@@ -70,7 +70,7 @@ const computeHoughMatches = (options) => {
     let binAngle = (Math.floor(fbinAngle - 0.5) + numAngleBins) % numAngleBins;
 
     // check can vote all 16 bins
-    if (binX < 0 || binX + 1 >= numXBins || binY < 0 || binY + 1 >= numYBins || binScale < 0 || binScale +1 >= numScaleBins) {
+    if (binX < 0 || binX + 1 >= numXBins || binY < 0 || binY + 1 >= numYBins || binScale < 0 || binScale + 1 >= numScaleBins) {
       querypointValids[i] = false;
       continue;
     }
@@ -115,7 +115,7 @@ const computeHoughMatches = (options) => {
   const binAngle = Math.floor(((maxVoteIndex - binX - (binY * numXBins)) % numXYAngleBins) / numXYBins);
   const binScale = Math.floor((maxVoteIndex - binX - (binY * numXBins) - (binAngle * numXYBins)) / numXYAngleBins);
 
-  //console.log("hough voted: ", {binX, binY, binAngle, binScale, maxVoteIndex});
+  // console.log("hough voted: ", {binX, binY, binAngle, binScale, maxVoteIndex});
 
   const houghMatches = [];
   for (let i = 0; i < matches.length; i++) {
@@ -123,29 +123,29 @@ const computeHoughMatches = (options) => {
 
     const queryBins = querypointBinLocations[i];
     // compute bin difference
-    const distBinX = Math.abs(queryBins.binX - (binX+0.5));
+    const distBinX = Math.abs(queryBins.binX - (binX + 0.5));
     if (distBinX >= kHoughBinDelta) continue;
 
-    const distBinY = Math.abs(queryBins.binY - (binY+0.5));
+    const distBinY = Math.abs(queryBins.binY - (binY + 0.5));
     if (distBinY >= kHoughBinDelta) continue;
 
-    const distBinScale = Math.abs(queryBins.binScale - (binScale+0.5));
+    const distBinScale = Math.abs(queryBins.binScale - (binScale + 0.5));
     if (distBinScale >= kHoughBinDelta) continue;
 
-    const temp = Math.abs(queryBins.binAngle - (binAngle+0.5));
+    const temp = Math.abs(queryBins.binAngle - (binAngle + 0.5));
     const distBinAngle = Math.min(temp, numAngleBins - temp);
     if (distBinAngle >= kHoughBinDelta) continue;
 
     houghMatches.push(matches[i]);
   }
   return houghMatches;
-}
+};
 
-const _mapCorrespondence = ({querypoint, keypoint, keycenterX, keycenterY, scaleOneOverLogK}) => {
+const _mapCorrespondence = ({ querypoint, keypoint, keycenterX, keycenterY, scaleOneOverLogK }) => {
   // map angle to (-pi, pi]
   let angle = querypoint.angle - keypoint.angle;
-  if (angle <= -Math.PI) angle += 2*Math.PI;
-  else if (angle > Math.PI) angle -= 2*Math.PI;
+  if (angle <= -Math.PI) angle += 2 * Math.PI;
+  else if (angle > Math.PI) angle -= 2 * Math.PI;
 
   const scale = querypoint.scale / keypoint.scale;
 
@@ -156,7 +156,7 @@ const _mapCorrespondence = ({querypoint, keypoint, keycenterX, keycenterY, scale
 
   const tp = [
     S[0] * keypoint.x + S[1] * keypoint.y,
-    S[2] * keypoint.x + S[3] * keypoint.y
+    S[2] * keypoint.x + S[3] * keypoint.y,
   ];
   const tx = querypoint.x - tp[0];
   const ty = querypoint.y - tp[1];
@@ -165,10 +165,10 @@ const _mapCorrespondence = ({querypoint, keypoint, keycenterX, keycenterY, scale
     x: S[0] * keycenterX + S[1] * keycenterY + tx,
     y: S[2] * keycenterX + S[3] * keycenterY + ty,
     angle: angle,
-    scale: Math.log(scale) * scaleOneOverLogK
-  }
-}
+    scale: Math.log(scale) * scaleOneOverLogK,
+  };
+};
 
 export {
-  computeHoughMatches
-}
+  computeHoughMatches,
+};

@@ -1,19 +1,19 @@
-import {Controller} from './controller.js';
-import {Compiler} from './compiler.js';
-import {UI} from '../ui/ui.js';
+import { Controller } from "./controller.js";
+import { Compiler } from "./compiler.js";
+import { UI } from "../ui/ui.js";
 
 export {
-  Controller, 
+  Controller,
   Compiler,
-  UI
-}
+  UI,
+};
 
 if (!window.MINDAR) {
   window.MINDAR = {};
 }
 
 window.MINDAR.IMAGE = {
-  Controller, 
+  Controller,
   Compiler,
-  UI
+  UI,
 };

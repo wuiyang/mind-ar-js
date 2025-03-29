@@ -1,7 +1,7 @@
-import { Matcher } from './matching/matcher.js';
-import { Estimator } from './estimation/estimator.js';
+import { Matcher } from "./matching/matcher.js";
+import { Estimator } from "./estimation/estimator.js";
 
-let projectionTransform = null;
+// let projectionTransform = null;
 let matchingDataList = null;
 let debugMode = false;
 let matcher = null;
@@ -12,14 +12,14 @@ onmessage = (msg) => {
 
   switch (data.type) {
     case "setup":
-      projectionTransform = data.projectionTransform;
+      // projectionTransform = data.projectionTransform;
       matchingDataList = data.matchingDataList;
       debugMode = data.debugMode;
       matcher = new Matcher(data.inputWidth, data.inputHeight, debugMode);
       estimator = new Estimator(data.projectionTransform);
       break;
 
-    case "match":
+    case "match": {
       const interestedTargetIndexes = data.targetIndexes;
 
       let matchedTargetIndex = -1;
@@ -44,21 +44,23 @@ onmessage = (msg) => {
       }
 
       postMessage({
-        type: 'matchDone',
+        type: "matchDone",
         targetIndex: matchedTargetIndex,
         modelViewTransform: matchedModelViewTransform,
-        debugExtra: matchedDebugExtra
+        debugExtra: matchedDebugExtra,
       });
       break;
+    }
 
-    case 'trackUpdate':
+    case "trackUpdate": {
       const { modelViewTransform, worldCoords, screenCoords } = data;
       const finalModelViewTransform = estimator.refineEstimate({ initialModelViewTransform: modelViewTransform, worldCoords, screenCoords });
       postMessage({
-        type: 'trackUpdateDone',
+        type: "trackUpdateDone",
         modelViewTransform: finalModelViewTransform,
       });
       break;
+    }
 
     case "dispose":
       close();
@@ -68,4 +70,3 @@ onmessage = (msg) => {
       throw new Error(`Invalid message type '${data.type}'`);
   }
 };
-

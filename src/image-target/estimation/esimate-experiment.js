@@ -1,16 +1,16 @@
 // try to implement https://hal.inria.fr/inria-00174036/PDF/RR-6303.pdf
-import {Matrix, inverse} from 'ml-matrix';
-import {SVD} from "svd-js";
-import {solveHomography} from '../utils/homography';
-import {computeScreenCoordiate} from "./utils";
+import { Matrix, inverse } from "ml-matrix";
+import { SVD } from "svd-js";
+import { solveHomography } from "../utils/homography";
+import { computeScreenCoordiate } from "./utils";
 
 const opposites_of_minors = (M, row, col) => {
-  let x1 = col === 0? 1: 0;
-  let x2 = col === 2? 1: 2;
-  let y1 = row === 0? 1: 0;
-  let y2 = row === 2? 1: 2;
+  let x1 = col === 0 ? 1 : 0;
+  let x2 = col === 2 ? 1 : 2;
+  let y1 = row === 0 ? 1 : 0;
+  let y2 = row === 2 ? 1 : 2;
   return M[y1][x2] * M[y2][x1] - M[y1][x1] * M[y2][x2];
-}
+};
 
 const findRmatFrom_tstar_n = (H, tstar, n, v) => {
   // computes R = H( I - (2/v)*te_star*ne_t )
@@ -21,20 +21,20 @@ const findRmatFrom_tstar_n = (H, tstar, n, v) => {
     [0 - twoDivV * tstar[2] * n[0], 0 - twoDivV * tstar[2] * n[1], 1 - twoDivV * tstar[2] * n[2]],
   ];
 
-  const R = [[0,0,0], [0,0,0], [0,0,0]];
+  const R = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
   for (let i = 0; i < 3; i++) {
     for (let j = 0; j < 3; j++) {
       for (let k = 0; k < 3; k++) {
-	R[i][j] += H[i][k] * tmp[k][j];
+        R[i][j] += H[i][k] * tmp[k][j];
       }
     }
   }
-  //const R = H.mmul( new Matrix(tmp));
+  // const R = H.mmul( new Matrix(tmp));
   return R;
-}
+};
 
-const estimate = ({screenCoords, worldCoords, projectionTransform}) => {
-  const Harray = solveHomography(worldCoords.map((p) => [p.x, p.y]), screenCoords.map((p) => [p.x, p.y]));
+const estimate = ({ screenCoords, worldCoords, projectionTransform }) => {
+  const Harray = solveHomography(worldCoords.map(p => [p.x, p.y]), screenCoords.map(p => [p.x, p.y]));
   const G = new Matrix([
     [Harray[0], Harray[1], Harray[2]],
     [Harray[3], Harray[4], Harray[5]],
@@ -43,7 +43,7 @@ const estimate = ({screenCoords, worldCoords, projectionTransform}) => {
   const K = new Matrix(projectionTransform);
   const KInv = inverse(K);
   const KInvArr = KInv.to2DArray();
-  const KArr = K.to2DArray();
+  // const KArr = K.to2DArray();
 
   const Hhat = KInv.mmul(G).mmul(K);
   const { q } = SVD(Hhat.to2DArray());
@@ -70,11 +70,11 @@ const estimate = ({screenCoords, worldCoords, projectionTransform}) => {
 
   // M01, M12, M02
   const M01 = opposites_of_minors(S, 0, 1);
-  const e01 = M01 >= 0? 1: -1;
+  const e01 = M01 >= 0 ? 1 : -1;
   const M12 = opposites_of_minors(S, 1, 2);
-  const e12 = M12 >= 0? 1: -1;
+  const e12 = M12 >= 0 ? 1 : -1;
   const M02 = opposites_of_minors(S, 0, 2);
-  const e02 = M02 >= 0? 1: -1;
+  const e02 = M02 >= 0 ? 1 : -1;
 
   let maxIndex = 0;
   if (Math.abs(S[1][1]) > Math.abs(S[maxIndex][maxIndex])) maxIndex = 1;
@@ -113,7 +113,7 @@ const estimate = ({screenCoords, worldCoords, projectionTransform}) => {
   const traceS = S[0][0] + S[1][1] + S[2][2];
   const v = 2.0 * Math.sqrt(1 + traceS - M00 - M11 - M22);
 
-  const ESii = S[maxIndex][maxIndex] >= 0? 1: -1
+  const ESii = S[maxIndex][maxIndex] >= 0 ? 1 : -1;
 
   const r_2 = 2 + traceS + v;
   const nt_2 = 2 + traceS - v;
@@ -145,7 +145,7 @@ const estimate = ({screenCoords, worldCoords, projectionTransform}) => {
 
   const HArr = H.to2DArray();
   console.log("ta_star", ta_star, tb_star);
- 
+
   /*
     """solutions = []
     # Ra, ta
@@ -166,10 +166,10 @@ const estimate = ({screenCoords, worldCoords, projectionTransform}) => {
     const t = [
       R1[0][0] * ta_star[0] + R1[0][1] * ta_star[1] + R1[0][2] * ta_star[2],
       R1[1][0] * ta_star[0] + R1[1][1] * ta_star[1] + R1[1][2] * ta_star[2],
-      R1[2][0] * ta_star[0] + R1[2][1] * ta_star[1] + R1[2][2] * ta_star[2]
-    ]
+      R1[2][0] * ta_star[0] + R1[2][1] * ta_star[1] + R1[2][2] * ta_star[2],
+    ];
     return t;
-  }
+  };
 
   const Ra = findRmatFrom_tstar_n(HArr, ta_star, na, v);
   const ta = findT(Ra, ta_star);
@@ -189,28 +189,27 @@ const estimate = ({screenCoords, worldCoords, projectionTransform}) => {
     ];
     return transform;
 
-    const modelViewProjectionTransform = [[],[],[]];
-    for (let j = 0; j < 3; j++ ) {
-      for (let i = 0; i < 4; i++) {
-	modelViewProjectionTransform[j][i] = KArr[j][0] * transform[0][i]
-					   + KArr[j][1] * transform[1][i]
-					   + KArr[j][2] * transform[2][i];
-      }
-    }
-    return modelViewProjectionTransform;
-  }
+    // const modelViewProjectionTransform = [[], [], []];
+    // for (let j = 0; j < 3; j++) {
+    //   for (let i = 0; i < 4; i++) {
+    //     modelViewProjectionTransform[j][i] = KArr[j][0] * transform[0][i]
+    //       + KArr[j][1] * transform[1][i]
+    //       + KArr[j][2] * transform[2][i];
+    //   }
+    // }
+    // return modelViewProjectionTransform;
+  };
   console.log("Ra ta", Ra, ta);
   console.log("Rb tb", Rb, tb);
 
   const tnT = new Matrix([
-    [ta[0] * na[0], ta[0] * na[1], ta[0] * na[2]], 
-    [ta[1] * na[0], ta[1] * na[1], ta[1] * na[2]], 
-    [ta[2] * na[0], ta[2] * na[1], ta[2] * na[2]], 
+    [ta[0] * na[0], ta[0] * na[1], ta[0] * na[2]],
+    [ta[1] * na[0], ta[1] * na[1], ta[1] * na[2]],
+    [ta[2] * na[0], ta[2] * na[1], ta[2] * na[2]],
   ]);
   const RtnT = (new Matrix(Ra)).add(tnT);
   console.log("tnT", tnT);
   console.log("RtnT", RtnT);
-
 
   const modelViewProjectionTransforms = [];
   modelViewProjectionTransforms.push(findModelViewProjectionTransform(Ra, ta));
@@ -225,13 +224,12 @@ const estimate = ({screenCoords, worldCoords, projectionTransform}) => {
     kx /= kz;
     ky /= kz;
     return [kx, ky];
-  }
+  };
 
   for (let s = 0; s < modelViewProjectionTransforms.length; s++) {
     console.log("solution", s);
-    const modelViewProjectionTransform = modelViewProjectionTransforms[s];
+    // const modelViewProjectionTransform = modelViewProjectionTransforms[s];
     for (let i = 0; i < worldCoords.length; i++) {
-
       let world = applyMatrix(KInvArr, [worldCoords[i].x, worldCoords[i].y]);
       let world2 = applyMatrix(RtnT.to2DArray(), world);
       let screen = applyMatrix(KInvArr, [screenCoords[i].x, screenCoords[i].y]);
@@ -239,9 +237,9 @@ const estimate = ({screenCoords, worldCoords, projectionTransform}) => {
       console.log("map", worldCoords[i], screenCoords[i]);
       console.log("mapped", world, world2, screen);
 
-      //const mapped = computeScreenCoordiate(modelViewProjectionTransform, worldCoords[i].x, worldCoords[i].y, 0);
-      //console.log("mapped", worldCoords[i], screenCoords[i], mapped);
-      //console.log("mapped", worldCoords[i], screenCoords[i], kx2, ky2, mapped);
+      // const mapped = computeScreenCoordiate(modelViewProjectionTransform, worldCoords[i].x, worldCoords[i].y, 0);
+      // console.log("mapped", worldCoords[i], screenCoords[i], mapped);
+      // console.log("mapped", worldCoords[i], screenCoords[i], kx2, ky2, mapped);
     }
   }
 
@@ -251,12 +249,11 @@ const estimate = ({screenCoords, worldCoords, projectionTransform}) => {
     for (let i = 0; i < worldCoords.length; i++) {
       let world = applyMatrix(KInvArr, [worldCoords[i].x, worldCoords[i].y]);
       let screen = applyMatrix(KInvArr, [screenCoords[i].x, screenCoords[i].y]);
-      //const mapped = computeScreenCoordiate(modelViewProjectionTransform, worldCoords[i].x, worldCoords[i].y, 0);
+      // const mapped = computeScreenCoordiate(modelViewProjectionTransform, worldCoords[i].x, worldCoords[i].y, 0);
       const mapped = computeScreenCoordiate(modelViewProjectionTransform, world[0], world[1], 0);
       console.log("mapped", worldCoords[i], screenCoords[i], world, screen, mapped);
     }
   }
-
 
   return null;
 
@@ -282,26 +279,26 @@ const estimate = ({screenCoords, worldCoords, projectionTransform}) => {
   ];
   */
 
-  for (let i = 0; i < worldCoords.length; i++) {
-    const mapped = computeScreenCoordiate(modelViewProjectionTransform, worldCoords[i].x, worldCoords[i].y, 0);
-    console.log("mapped", worldCoords[i], screenCoords[i], mapped);
-  }
+  // for (let i = 0; i < worldCoords.length; i++) {
+  //   const mapped = computeScreenCoordiate(modelViewProjectionTransform, worldCoords[i].x, worldCoords[i].y, 0);
+  //   console.log("mapped", worldCoords[i], screenCoords[i], mapped);
+  // }
 
-  // this is the full computation if the projectTransform does not look like the expected format, but more computations
-  const modelViewTransform = [[],[],[]];
-  for (let j = 0; j < 3; j++ ) {
-    for (let i = 0; i < 4; i++) {
-      modelViewTransform[j][i] = KInvArr[j][0] * modelViewProjectionTransform[0][i]
-			       + KInvArr[j][1] * modelViewProjectionTransform[1][i]
-			       + KInvArr[j][2] * modelViewProjectionTransform[2][i];
-    }
-  }
-  console.log("KInvArr", KInvArr);
-  console.log("modelViewProjectionTransform", modelViewProjectionTransform);
-  console.log("modelViewTransform", modelViewTransform);
-  return modelViewTransform;
-}
+  // // this is the full computation if the projectTransform does not look like the expected format, but more computations
+  // const modelViewTransform = [[], [], []];
+  // for (let j = 0; j < 3; j++) {
+  //   for (let i = 0; i < 4; i++) {
+  //     modelViewTransform[j][i] = KInvArr[j][0] * modelViewProjectionTransform[0][i]
+  //       + KInvArr[j][1] * modelViewProjectionTransform[1][i]
+  //       + KInvArr[j][2] * modelViewProjectionTransform[2][i];
+  //   }
+  // }
+  // console.log("KInvArr", KInvArr);
+  // console.log("modelViewProjectionTransform", modelViewProjectionTransform);
+  // console.log("modelViewTransform", modelViewTransform);
+  // return modelViewTransform;
+};
 
 export {
   estimate,
-}
+};

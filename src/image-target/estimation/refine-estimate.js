@@ -1,19 +1,19 @@
-import {Matrix, inverse} from 'ml-matrix';
-import { applyModelViewProjectionTransform, buildModelViewProjectionTransform, computeScreenCoordiate} from './utils.js';
+import { Matrix, inverse } from "ml-matrix";
+import { applyModelViewProjectionTransform, buildModelViewProjectionTransform, computeScreenCoordiate } from "./utils.js";
 
 const TRACKING_THRESH = 5.0; // default
 const K2_FACTOR = 4.0; // Question: should it be relative to the size of the screen instead of hardcoded?
 const ICP_MAX_LOOP = 10;
 const ICP_BREAK_LOOP_ERROR_THRESH = 0.1;
 const ICP_BREAK_LOOP_ERROR_RATIO_THRESH = 0.99;
-const ICP_BREAK_LOOP_ERROR_THRESH2 = 4.0;
+// const ICP_BREAK_LOOP_ERROR_THRESH2 = 4.0;
 
 // some temporary/intermediate variables used later. Declare them beforehand to reduce new object allocations
-let mat = [[],[],[]]; 
-let J_U_Xc = [[],[]]; // 2x3
-let J_Xc_S = [[],[],[]]; // 3x6
+let mat = [[], [], []];
+let J_U_Xc = [[], []]; // 2x3
+let J_Xc_S = [[], [], []]; // 3x6
 
-const refineEstimate = ({initialModelViewTransform, projectionTransform, worldCoords, screenCoords}) => {
+const refineEstimate = ({ initialModelViewTransform, projectionTransform, worldCoords, screenCoords }) => {
   // Question: shall we normlize the screen coords as well?
   // Question: do we need to normlize the scale as well, i.e. make coords from -1 to 1
   //
@@ -30,10 +30,10 @@ const refineEstimate = ({initialModelViewTransform, projectionTransform, worldCo
 
   const normalizedWorldCoords = [];
   for (let i = 0; i < worldCoords.length; i++) {
-    normalizedWorldCoords.push({x: worldCoords[i].x - dx, y: worldCoords[i].y - dy, z: worldCoords[i].z});
+    normalizedWorldCoords.push({ x: worldCoords[i].x - dx, y: worldCoords[i].y - dy, z: worldCoords[i].z });
   }
 
-  const diffModelViewTransform = [[],[],[]];
+  const diffModelViewTransform = [[], [], []];
   for (let j = 0; j < 3; j++) {
     for (let i = 0; i < 3; i++) {
       diffModelViewTransform[j][i] = initialModelViewTransform[j][i];
@@ -48,11 +48,11 @@ const refineEstimate = ({initialModelViewTransform, projectionTransform, worldCo
   let updatedModelViewTransform = diffModelViewTransform; // iteratively update this transform
   let finalModelViewTransform = null;
   for (let i = 0; i < inlierProbs.length; i++) {
-    const ret = _doICP({initialModelViewTransform: updatedModelViewTransform, projectionTransform, worldCoords: normalizedWorldCoords, screenCoords, inlierProb: inlierProbs[i]});
+    const ret = _doICP({ initialModelViewTransform: updatedModelViewTransform, projectionTransform, worldCoords: normalizedWorldCoords, screenCoords, inlierProb: inlierProbs[i] });
 
     updatedModelViewTransform = ret.modelViewTransform;
 
-    //console.log("err", ret.err);
+    // console.log("err", ret.err);
 
     if (ret.err < TRACKING_THRESH) {
       finalModelViewTransform = updatedModelViewTransform;
@@ -68,11 +68,11 @@ const refineEstimate = ({initialModelViewTransform, projectionTransform, worldCo
   finalModelViewTransform[2][3] = finalModelViewTransform[2][3] - finalModelViewTransform[2][0] * dx - finalModelViewTransform[2][1] * dy;
 
   return finalModelViewTransform;
-}
+};
 
 // ICP iteration
 // Question: can someone provide theoretical reference / mathematical proof for the following computations?
-const _doICP = ({initialModelViewTransform, projectionTransform, worldCoords, screenCoords, inlierProb}) => {
+const _doICP = ({ initialModelViewTransform, projectionTransform, worldCoords, screenCoords, inlierProb }) => {
   const isRobustMode = inlierProb < 1;
 
   let modelViewTransform = initialModelViewTransform;
@@ -105,12 +105,12 @@ const _doICP = ({initialModelViewTransform, projectionTransform, worldCoords, sc
       for (let n = 0; n < worldCoords.length; n++) {
         E2[n] = E[n];
       }
-      E2.sort((a, b) => {return a-b;});
+      E2.sort((a, b) => a - b);
 
       K2 = Math.max(E2[inlierNum] * K2_FACTOR, 16.0);
       for (let n = 0; n < worldCoords.length; n++) {
-        if (E2[n] > K2) err1 += K2/ 6;
-        else err1 +=  K2/6.0 * (1.0 - (1.0-E2[n]/K2)*(1.0-E2[n]/K2)*(1.0-E2[n]/K2));
+        if (E2[n] > K2) err1 += K2 / 6;
+        else err1 += K2 / 6.0 * (1.0 - (1.0 - E2[n] / K2) * (1.0 - E2[n] / K2) * (1.0 - E2[n] / K2));
       }
     } else {
       for (let n = 0; n < worldCoords.length; n++) {
@@ -119,11 +119,11 @@ const _doICP = ({initialModelViewTransform, projectionTransform, worldCoords, sc
     }
     err1 /= worldCoords.length;
 
-    //console.log("icp loop", inlierProb, l, err1);
+    // console.log("icp loop", inlierProb, l, err1);
 
     if (err1 < ICP_BREAK_LOOP_ERROR_THRESH) break;
-    //if (l > 0 && err1 < ICP_BREAK_LOOP_ERROR_THRESH2 && err1/err0 > ICP_BREAK_LOOP_ERROR_RATIO_THRESH) break;
-    if (l > 0 && err1/err0 > ICP_BREAK_LOOP_ERROR_RATIO_THRESH) break;
+    // if (l > 0 && err1 < ICP_BREAK_LOOP_ERROR_THRESH2 && err1/err0 > ICP_BREAK_LOOP_ERROR_RATIO_THRESH) break;
+    if (l > 0 && err1 / err0 > ICP_BREAK_LOOP_ERROR_RATIO_THRESH) break;
     if (l === ICP_MAX_LOOP) break;
 
     err0 = err1;
@@ -135,10 +135,10 @@ const _doICP = ({initialModelViewTransform, projectionTransform, worldCoords, sc
         continue;
       }
 
-      const J_U_S = _getJ_U_S({modelViewProjectionTransform, modelViewTransform, projectionTransform, worldCoord: worldCoords[n]});
+      const J_U_S = _getJ_U_S({ modelViewProjectionTransform, modelViewTransform, projectionTransform, worldCoord: worldCoords[n] });
 
       if (isRobustMode) {
-        const W = (1.0 - E[n]/K2)*(1.0 - E[n]/K2);
+        const W = (1.0 - E[n] / K2) * (1.0 - E[n] / K2);
 
         for (let j = 0; j < 2; j++) {
           for (let i = 0; i < 6; i++) {
@@ -157,23 +157,23 @@ const _doICP = ({initialModelViewTransform, projectionTransform, worldCoords, sc
       }
     }
 
-    const dS = _getDeltaS({dU, J_U_S: allJ_U_S});
+    const dS = _getDeltaS({ dU, J_U_S: allJ_U_S });
     if (dS === null) break;
 
-    modelViewTransform = _updateModelViewTransform({modelViewTransform, dS});
+    modelViewTransform = _updateModelViewTransform({ modelViewTransform, dS });
   }
-  return {modelViewTransform, err: err1};
-}
+  return { modelViewTransform, err: err1 };
+};
 
-const _updateModelViewTransform = ({modelViewTransform, dS}) => {
+const _updateModelViewTransform = ({ modelViewTransform, dS }) => {
   /**
    * dS has 6 paragrams, first half is rotation, second half is translation
-   * rotation is expressed in angle-axis, 
+   * rotation is expressed in angle-axis,
    *   [S[0], S[1] ,S[2]] is the axis of rotation, and the magnitude is the angle
    */
   let ra = dS[0] * dS[0] + dS[1] * dS[1] + dS[2] * dS[2];
   let q0, q1, q2;
-  if( ra < 0.000001 ) {
+  if (ra < 0.000001) {
     q0 = 1.0;
     q1 = 0.0;
     q2 = 0.0;
@@ -190,33 +190,33 @@ const _updateModelViewTransform = ({modelViewTransform, dS}) => {
   const one_cra = 1.0 - cra;
 
   // mat is [R|t], 3D rotation and translation
-  mat[0][0] = q0*q0*one_cra + cra;
-  mat[0][1] = q0*q1*one_cra - q2*sra;
-  mat[0][2] = q0*q2*one_cra + q1*sra;
+  mat[0][0] = q0 * q0 * one_cra + cra;
+  mat[0][1] = q0 * q1 * one_cra - q2 * sra;
+  mat[0][2] = q0 * q2 * one_cra + q1 * sra;
   mat[0][3] = dS[3];
-  mat[1][0] = q1*q0*one_cra + q2*sra;
-  mat[1][1] = q1*q1*one_cra + cra;
-  mat[1][2] = q1*q2*one_cra - q0*sra;
-  mat[1][3] = dS[4]
-  mat[2][0] = q2*q0*one_cra - q1*sra;
-  mat[2][1] = q2*q1*one_cra + q0*sra;
-  mat[2][2] = q2*q2*one_cra + cra;
+  mat[1][0] = q1 * q0 * one_cra + q2 * sra;
+  mat[1][1] = q1 * q1 * one_cra + cra;
+  mat[1][2] = q1 * q2 * one_cra - q0 * sra;
+  mat[1][3] = dS[4];
+  mat[2][0] = q2 * q0 * one_cra - q1 * sra;
+  mat[2][1] = q2 * q1 * one_cra + q0 * sra;
+  mat[2][2] = q2 * q2 * one_cra + cra;
   mat[2][3] = dS[5];
 
   // the updated transform is the original transform x delta transform
-  const mat2 = [[],[],[]];
-  for (let j = 0; j < 3; j++ ) {
-    for (let i = 0; i < 4; i++ ) {
+  const mat2 = [[], [], []];
+  for (let j = 0; j < 3; j++) {
+    for (let i = 0; i < 4; i++) {
       mat2[j][i] = modelViewTransform[j][0] * mat[0][i]
-                   + modelViewTransform[j][1] * mat[1][i]
-                   + modelViewTransform[j][2] * mat[2][i];
+        + modelViewTransform[j][1] * mat[1][i]
+        + modelViewTransform[j][2] * mat[2][i];
     }
     mat2[j][3] += modelViewTransform[j][3];
   }
   return mat2;
-}
+};
 
-const _getDeltaS = ({dU, J_U_S}) => {
+const _getDeltaS = ({ dU, J_U_S }) => {
   const J = new Matrix(J_U_S);
   const U = new Matrix(dU);
 
@@ -227,29 +227,29 @@ const _getDeltaS = ({dU, J_U_S}) => {
   let JTJInv;
   try {
     JTJInv = inverse(JTJ);
-  } catch (e) {
+  } catch {
     return null;
   }
 
   const S = JTJInv.mmul(JTU);
   return S.to1DArray();
-}
+};
 
-const _getJ_U_S = ({modelViewProjectionTransform, modelViewTransform, projectionTransform, worldCoord}) => {
+const _getJ_U_S = ({ modelViewProjectionTransform, modelViewTransform, projectionTransform, worldCoord }) => {
   const T = modelViewTransform;
-  const {x, y, z} = worldCoord;
+  const { x, y, z } = worldCoord;
 
   const u = applyModelViewProjectionTransform(modelViewProjectionTransform, x, y, z);
 
   const z2 = u.z * u.z;
   // Question: This is the most confusing matrix to me. I've no idea how to derive this.
-  //J_U_Xc[0][0] = (projectionTransform[0][0] * u.z - projectionTransform[2][0] * u.x) / z2;
-  //J_U_Xc[0][1] = (projectionTransform[0][1] * u.z - projectionTransform[2][1] * u.x) / z2;
-  //J_U_Xc[0][2] = (projectionTransform[0][2] * u.z - projectionTransform[2][2] * u.x) / z2;
-  //J_U_Xc[1][0] = (projectionTransform[1][0] * u.z - projectionTransform[2][0] * u.y) / z2;
-  //J_U_Xc[1][1] = (projectionTransform[1][1] * u.z - projectionTransform[2][1] * u.y) / z2;
-  //J_U_Xc[1][2] = (projectionTransform[1][2] * u.z - projectionTransform[2][2] * u.y) / z2;
-  
+  // J_U_Xc[0][0] = (projectionTransform[0][0] * u.z - projectionTransform[2][0] * u.x) / z2;
+  // J_U_Xc[0][1] = (projectionTransform[0][1] * u.z - projectionTransform[2][1] * u.x) / z2;
+  // J_U_Xc[0][2] = (projectionTransform[0][2] * u.z - projectionTransform[2][2] * u.x) / z2;
+  // J_U_Xc[1][0] = (projectionTransform[1][0] * u.z - projectionTransform[2][0] * u.y) / z2;
+  // J_U_Xc[1][1] = (projectionTransform[1][1] * u.z - projectionTransform[2][1] * u.y) / z2;
+  // J_U_Xc[1][2] = (projectionTransform[1][2] * u.z - projectionTransform[2][2] * u.y) / z2;
+
   // The above is the original implementation, but simplify to below becuase projetionTransform[2][0] and [2][1] are zero
   J_U_Xc[0][0] = (projectionTransform[0][0] * u.z) / z2;
   J_U_Xc[0][1] = (projectionTransform[0][1] * u.z) / z2;
@@ -268,7 +268,7 @@ const _getJ_U_S = ({modelViewProjectionTransform, modelViewTransform, projection
   J_Xc_S[0][1] = -T[0][2] * x;
   J_Xc_S[0][2] = T[0][1] * x - T[0][0] * y;
   J_Xc_S[0][3] = T[0][0];
-  J_Xc_S[0][4] = T[0][1]; 
+  J_Xc_S[0][4] = T[0][1];
   J_Xc_S[0][5] = T[0][2];
 
   J_Xc_S[1][0] = T[1][2] * y;
@@ -289,14 +289,14 @@ const _getJ_U_S = ({modelViewProjectionTransform, modelViewTransform, projection
   for (let j = 0; j < 2; j++) {
     for (let i = 0; i < 6; i++) {
       J_U_S[j][i] = 0.0;
-      for (let k = 0; k < 3; k++ ) {
+      for (let k = 0; k < 3; k++) {
         J_U_S[j][i] += J_U_Xc[j][k] * J_Xc_S[k][i];
       }
     }
   }
   return J_U_S;
-}
+};
 
 export {
-  refineEstimate
-}
+  refineEstimate,
+};

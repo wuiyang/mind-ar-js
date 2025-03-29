@@ -1,13 +1,13 @@
 import { Scene, WebGLRenderer, PerspectiveCamera, SRGBColorSpace, Mesh, MeshStandardMaterial, Group } from "three";
-//import { CSS3DRenderer } from '../libs/CSS3DRenderer.js';
-import {CSS3DRenderer} from 'three/addons/renderers/CSS3DRenderer.js'
+// import { CSS3DRenderer } from '../libs/CSS3DRenderer.js';
+import { CSS3DRenderer } from "three/addons/renderers/CSS3DRenderer.js";
 import { Controller } from "./controller.js";
 import { UI } from "../ui/ui.js";
-import {BufferGeometry,BufferAttribute} from "three";
-const THREE={BufferGeometry,BufferAttribute};
+import { BufferGeometry, BufferAttribute } from "three";
+const THREE = { BufferGeometry, BufferAttribute };
 
 export class MindARThree {
-  constructor({container, uiLoading="yes", uiScanning="yes", uiError="yes", filterMinCF=null, filterBeta=null,
+  constructor({ container, uiLoading = "yes", uiScanning = "yes", uiError = "yes", filterMinCF = null, filterBeta = null,
     userDeviceId = null, environmentDeviceId = null, disableFaceMirror = false,
   }) {
     this.container = container;
@@ -38,7 +38,7 @@ export class MindARThree {
 
     this.shouldFaceUser = true;
 
-    window.addEventListener('resize', this._resize.bind(this));
+    window.addEventListener("resize", this._resize.bind(this));
   }
 
   async start() {
@@ -96,15 +96,15 @@ export class MindARThree {
 
   _startVideo() {
     return new Promise((resolve, reject) => {
-      this.video = document.createElement('video');
+      this.video = document.createElement("video");
 
-      this.video.setAttribute('autoplay', '');
-      this.video.setAttribute('muted', '');
-      this.video.setAttribute('playsinline', '');
-      this.video.style.position = 'absolute'
-      this.video.style.top = '0px'
-      this.video.style.left = '0px'
-      this.video.style.zIndex = '-2'
+      this.video.setAttribute("autoplay", "");
+      this.video.setAttribute("muted", "");
+      this.video.setAttribute("playsinline", "");
+      this.video.style.position = "absolute";
+      this.video.style.top = "0px";
+      this.video.style.left = "0px";
+      this.video.style.zIndex = "-2";
       this.container.appendChild(this.video);
 
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -115,26 +115,26 @@ export class MindARThree {
 
       const constraints = {
         audio: false,
-        video: {}
+        video: {},
       };
       if (this.shouldFaceUser) {
         if (this.userDeviceId) {
           constraints.video.deviceId = { exact: this.userDeviceId };
         } else {
-          constraints.video.facingMode = 'user';
+          constraints.video.facingMode = "user";
         }
       } else {
         if (this.environmentDeviceId) {
           constraints.video.deviceId = { exact: this.environmentDeviceId };
         } else {
-          constraints.video.facingMode = 'environment';
+          constraints.video.facingMode = "environment";
         }
       }
 
       navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
-        this.video.addEventListener('loadedmetadata', () => {
-          this.video.setAttribute('width', this.video.videoWidth);
-          this.video.setAttribute('height', this.video.videoHeight);
+        this.video.addEventListener("loadedmetadata", () => {
+          this.video.setAttribute("width", this.video.videoWidth);
+          this.video.setAttribute("height", this.video.videoHeight);
           resolve();
         });
         this.video.srcObject = stream;
@@ -145,86 +145,83 @@ export class MindARThree {
     });
   }
 
-  _startAR() {
-    return new Promise(async (resolve, reject) => {
-      const video = this.video;
-      const container = this.container;
+  async _startAR() {
+    const video = this.video;
+    // const container = this.container;
 
-      this.controller.onUpdate = ({ hasFace, estimateResult }) => {
+    this.controller.onUpdate = ({ hasFace, estimateResult }) => {
+      for (let i = 0; i < this.anchors.length; i++) {
+        if (this.anchors[i].css) {
+          this.anchors[i].group.children.forEach((obj) => {
+            obj.element.style.visibility = hasFace ? "visible" : "hidden";
+          });
+        } else {
+          this.anchors[i].group.visible = hasFace;
+        }
+      }
+      for (let i = 0; i < this.faceMeshes.length; i++) {
+        this.faceMeshes[i].visible = hasFace;
+      }
+
+      if (hasFace) {
+        const { faceMatrix } = estimateResult;
+        this.latestEstimate = estimateResult;
+
         for (let i = 0; i < this.anchors.length; i++) {
+          const landmarkIndex = this.anchors[i].landmarkIndex;
+          const landmarkMatrix = this.controller.getLandmarkMatrix(landmarkIndex);
+
           if (this.anchors[i].css) {
-            this.anchors[i].group.children.forEach((obj) => {
-              obj.element.style.visibility = hasFace ? "visible" : "hidden";
-            });
+            const cssScale = 0.001;
+
+            const scaledElements = [
+              cssScale * landmarkMatrix[0], cssScale * landmarkMatrix[1], landmarkMatrix[2], landmarkMatrix[3],
+              cssScale * landmarkMatrix[4], cssScale * landmarkMatrix[5], landmarkMatrix[6], landmarkMatrix[7],
+              cssScale * landmarkMatrix[8], cssScale * landmarkMatrix[9], landmarkMatrix[10], landmarkMatrix[11],
+              cssScale * landmarkMatrix[12], cssScale * landmarkMatrix[13], landmarkMatrix[14], landmarkMatrix[15],
+            ];
+            this.anchors[i].group.matrix.set(...scaledElements);
           } else {
-            this.anchors[i].group.visible = hasFace;
+            this.anchors[i].group.matrix.set(...landmarkMatrix);
           }
         }
         for (let i = 0; i < this.faceMeshes.length; i++) {
-          this.faceMeshes[i].visible = hasFace;
+          this.faceMeshes[i].matrix.set(...faceMatrix);
         }
-
-        if (hasFace) {
-          const { metricLandmarks, faceMatrix, faceScale, blendshapes} = estimateResult;
-          this.latestEstimate = estimateResult;
-
-          for (let i = 0; i < this.anchors.length; i++) {
-            const landmarkIndex = this.anchors[i].landmarkIndex;
-            const landmarkMatrix = this.controller.getLandmarkMatrix(landmarkIndex);
-
-            if (this.anchors[i].css) {
-              const cssScale = 0.001;
-
-              const scaledElements = [
-                cssScale * landmarkMatrix[0], cssScale * landmarkMatrix[1], landmarkMatrix[2], landmarkMatrix[3],
-                cssScale * landmarkMatrix[4], cssScale * landmarkMatrix[5], landmarkMatrix[6], landmarkMatrix[7],
-                cssScale * landmarkMatrix[8], cssScale * landmarkMatrix[9], landmarkMatrix[10], landmarkMatrix[11],
-                cssScale * landmarkMatrix[12], cssScale * landmarkMatrix[13], landmarkMatrix[14], landmarkMatrix[15]
-              ]
-              this.anchors[i].group.matrix.set(...scaledElements);
-            } else {
-              this.anchors[i].group.matrix.set(...landmarkMatrix);
-            }
-          }
-          for (let i = 0; i < this.faceMeshes.length; i++) {
-            this.faceMeshes[i].matrix.set(...faceMatrix);
-          }
-        } else {
-          this.latestEstimate = null;
-        }
+      } else {
+        this.latestEstimate = null;
       }
-      this._resize();
+    };
+    this._resize();
 
-      const flipFace = this.shouldFaceUser && !this.disableFaceMirror;
+    const flipFace = this.shouldFaceUser && !this.disableFaceMirror;
 
-      await this.controller.setup(flipFace);
-      await this.controller.dummyRun(video);
+    await this.controller.setup(flipFace);
+    await this.controller.dummyRun(video);
 
-      this._resize();
-      this.controller.processVideo(video);
-      resolve();
-    });
+    this._resize();
+    this.controller.processVideo(video);
   }
 
   _resize() {
-    const { renderer, cssRenderer, camera, container, video } = this;
+    const { renderer, cssRenderer, container, video } = this;
     if (!video) return;
 
-    if (true) { // only needed if video dimension updated (e.g. when mobile orientation changes)
-      this.video.setAttribute('width', this.video.videoWidth);
-      this.video.setAttribute('height', this.video.videoHeight);
-      this.controller.onInputResized(video);
+    // if (true) { // only needed if video dimension updated (e.g. when mobile orientation changes)
+    this.video.setAttribute("width", this.video.videoWidth);
+    this.video.setAttribute("height", this.video.videoHeight);
+    this.controller.onInputResized(video);
 
-      const { fov, aspect, near, far } = this.controller.getCameraParams();
-      this.camera.fov = fov;
-      this.camera.aspect = aspect;
-      this.camera.near = near;
-      this.camera.far = far;
-      this.camera.updateProjectionMatrix();
+    const { fov, aspect, near, far } = this.controller.getCameraParams();
+    this.camera.fov = fov;
+    this.camera.aspect = aspect;
+    this.camera.near = near;
+    this.camera.far = far;
+    this.camera.updateProjectionMatrix();
 
-      this.renderer.setSize(this.video.videoWidth, this.video.videoHeight);
-      this.cssRenderer.setSize(this.video.videoWidth, this.video.videoHeight);
-    }
+    this.renderer.setSize(this.video.videoWidth, this.video.videoHeight);
+    this.cssRenderer.setSize(this.video.videoWidth, this.video.videoHeight);
+    // }
 
     let vw, vh; // display css width, height
     const videoRatio = video.videoWidth / video.videoHeight;
@@ -243,28 +240,28 @@ export class MindARThree {
     video.style.height = vh + "px";
 
     if (this.shouldFaceUser && !this.disableFaceMirror) {
-      video.style.transform = 'scaleX(-1)';
+      video.style.transform = "scaleX(-1)";
     } else {
-      video.style.transform = 'scaleX(1)';
+      video.style.transform = "scaleX(1)";
     }
 
     const canvas = renderer.domElement;
     const cssCanvas = cssRenderer.domElement;
 
-    canvas.style.position = 'absolute';
+    canvas.style.position = "absolute";
     canvas.style.top = video.style.top;
     canvas.style.left = video.style.left;
     canvas.style.width = video.style.width;
     canvas.style.height = video.style.height;
 
-    cssCanvas.style.position = 'absolute';
+    cssCanvas.style.position = "absolute";
     cssCanvas.style.top = video.style.top;
     cssCanvas.style.left = video.style.left;
     // cannot set style width for cssCanvas, because that is also used as renderer size
-    //cssCanvas.style.width = video.style.width;
-    //cssCanvas.style.height = video.style.height;
+    // cssCanvas.style.width = video.style.width;
+    // cssCanvas.style.height = video.style.height;
     cssCanvas.style.transformOrigin = "top left";
-    cssCanvas.style.transform = 'scale(' + (vw / parseFloat(cssCanvas.style.width)) + ',' + (vh / parseFloat(cssCanvas.style.height)) + ')';
+    cssCanvas.style.transform = "scale(" + (vw / parseFloat(cssCanvas.style.width)) + "," + (vh / parseFloat(cssCanvas.style.height)) + ")";
   }
 }
 
@@ -276,4 +273,4 @@ if (!window.MINDAR.FACE) {
 }
 
 window.MINDAR.FACE.MindARThree = MindARThree;
-//window.MINDAR.FACE.THREE = THREE;
+// window.MINDAR.FACE.THREE = THREE;

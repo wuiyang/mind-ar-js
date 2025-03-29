@@ -1,6 +1,5 @@
-
-import * as FakeShader from './fakeShader.js';
-import {engine} from '@tensorflow/tfjs'
+import * as FakeShader from "./fakeShader.js";
+import { engine } from "@tensorflow/tfjs";
 const FREAK_EXPANSION_FACTOR = 7.0;
 
 const LAPLACIAN_THRESHOLD = 3.0;
@@ -13,7 +12,7 @@ function GetProgram(image) {
   const imageWidth = image.shape[1];
   const imageHeight = image.shape[0];
   const kernel = {
-    variableNames: ['image0', 'image1', 'image2'],
+    variableNames: ["image0", "image1", "image2"],
     outputShape: [imageHeight, imageWidth],
     userCode:
       function () {
@@ -61,8 +60,8 @@ function GetProgram(image) {
         }
 
         // compute edge score and reject based on threshold
-        const dxx = this.getImage1(y, x + 1) + this.getImage1(y, x - 1) - 2. * this.getImage1(y, x);
-        const dyy = this.getImage1(y + 1, x) + this.getImage1(y - 1, x) - 2. * this.getImage1(y, x);
+        const dxx = this.getImage1(y, x + 1) + this.getImage1(y, x - 1) - 2.0 * this.getImage1(y, x);
+        const dyy = this.getImage1(y + 1, x) + this.getImage1(y - 1, x) - 2.0 * this.getImage1(y, x);
         const dxy = 0.25 * (this.getImage1(y - 1, x - 1) + this.getImage1(y + 1, x + 1) - this.getImage1(y - 1, x + 1) - this.getImage1(y + 1, x - 1));
 
         const det = (dxx * dyy) - (dxy * dxy);
@@ -79,28 +78,26 @@ function GetProgram(image) {
           return;
         }
         this.setOutput(this.getImage1(y, x));
-      }
+      },
 
   };
-  
 
   return kernel;
 }
-
 
 export const buildExtremas = (args) => {
   let { image0, image1, image2 } = args.inputs;
   /** @type {MathBackendCPU} */
   const backend = args.backend;
 
-  image0 = engine().runKernel('DownsampleBilinear', { image: image0 });
-  image2 = engine().runKernel('UpsampleBilinear', { image: image2, targetImage: image1 });
-  const program=GetProgram(image1);
-  return FakeShader.runCode(backend,program,[image0,image1,image2],image1.dtype);
-}
+  image0 = engine().runKernel("DownsampleBilinear", { image: image0 });
+  image2 = engine().runKernel("UpsampleBilinear", { image: image2, targetImage: image1 });
+  const program = GetProgram(image1);
+  return FakeShader.runCode(backend, program, [image0, image1, image2], image1.dtype);
+};
 
-export const buildExtremasConfig = {//: KernelConfig
+export const buildExtremasConfig = { // : KernelConfig
   kernelName: "BuildExtremas",
-  backendName: 'cpu',
-  kernelFunc: buildExtremas,// as {} as KernelFunc,
+  backendName: "cpu",
+  kernelFunc: buildExtremas, // as {} as KernelFunc,
 };

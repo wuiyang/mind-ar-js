@@ -1,16 +1,16 @@
-import {cv} from './opencv.js'
+import { cv } from "./opencv.js";
 let initialized = false;
 
 const _cv = {};
 
 const waitResolves = [];
 
-export const waitCV = async() => {
+export const waitCV = async () => {
   if (initialized) return true;
   return new Promise((resolve, reject) => {
     waitResolves.push(resolve);
   });
-}
+};
 
 cv().then((target) => {
   initialized = true;
@@ -20,5 +20,5 @@ cv().then((target) => {
   });
 });
 
-export const opencv=_cv;
-//module.exports={waitCV,opencv}
+export const opencv = _cv;
+// module.exports={waitCV,opencv}

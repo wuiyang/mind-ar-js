@@ -1,16 +1,15 @@
-import * as tf from '@tensorflow/tfjs';
-import {Detector} from './detector.js';
-import {buildModelViewProjectionTransform, computeScreenCoordiate} from '../estimation/utils.js';
+// import * as tf from "@tensorflow/tfjs";
+import { Detector } from "./detector.js";
 
 class CropDetector {
-  constructor(width, height, debugMode=false) {
+  constructor(width, height, debugMode = false) {
     this.debugMode = debugMode;
     this.width = width;
     this.height = height;
 
-    // nearest power of 2, min dimensions 
+    // nearest power of 2, min dimensions
     let minDimension = Math.min(width, height) / 2;
-    let cropSize = Math.pow( 2, Math.round( Math.log( minDimension ) / Math.log( 2 ) ) ); 
+    let cropSize = Math.pow(2, Math.round(Math.log(minDimension) / Math.log(2)));
     this.cropSize = cropSize;
 
     this.detector = new Detector(cropSize, cropSize, debugMode);
@@ -25,7 +24,7 @@ class CropDetector {
     const result = this._detect(inputImageT, startX, startY);
 
     if (this.debugMode) {
-      result.debugExtra.crop = {startX, startY, cropSize: this.cropSize}; 
+      result.debugExtra.crop = { startX, startY, cropSize: this.cropSize };
     }
     return result;
   }
@@ -50,7 +49,7 @@ class CropDetector {
 
   _detect(inputImageT, startX, startY) {
     const cropInputImageT = inputImageT.slice([startY, startX], [this.cropSize, this.cropSize]);
-    const {featurePoints, debugExtra} = this.detector.detect(cropInputImageT);
+    const { featurePoints, debugExtra } = this.detector.detect(cropInputImageT);
     featurePoints.forEach((p) => {
       p.x += startX;
       p.y += startY;
@@ -59,10 +58,10 @@ class CropDetector {
       debugExtra.projectedImage = cropInputImageT.arraySync();
     }
     cropInputImageT.dispose();
-    return {featurePoints: featurePoints, debugExtra};
+    return { featurePoints: featurePoints, debugExtra };
   }
 }
 
 export {
-  CropDetector
+  CropDetector,
 };

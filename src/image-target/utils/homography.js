@@ -1,8 +1,8 @@
-import {Matrix, inverse} from 'ml-matrix';
+import { Matrix, inverse } from "ml-matrix";
 
 const solveHomography = (srcPoints, dstPoints) => {
-  const {normPoints: normSrcPoints, param: srcParam} = _normalizePoints(srcPoints);
-  const {normPoints: normDstPoints, param: dstParam} = _normalizePoints(dstPoints);
+  const { normPoints: normSrcPoints, param: srcParam } = _normalizePoints(srcPoints);
+  const { normPoints: normDstPoints, param: dstParam } = _normalizePoints(dstPoints);
 
   const num = normDstPoints.length;
   const AData = [];
@@ -45,14 +45,14 @@ const solveHomography = (srcPoints, dstPoints) => {
     const C = ATAInv.mmul(ATB).to1DArray();
     const H = _denormalizeHomography(C, srcParam, dstParam);
     return H;
-  } catch (e) {
+  } catch {
     return null;
   }
-}
+};
 
 // centroid at origin and avg distance from origin is sqrt(2)
 const _normalizePoints = (coords) => {
-  //return {normalizedCoords: coords, param: {meanX: 0, meanY: 0, s: 1}}; // skip normalization
+  // return {normalizedCoords: coords, param: {meanX: 0, meanY: 0, s: 1}}; // skip normalization
 
   let sumX = 0;
   let sumY = 0;
@@ -78,8 +78,8 @@ const _normalizePoints = (coords) => {
       (coords[i][1] - meanY) * s,
     ]);
   }
-  return {normPoints, param: {meanX, meanY, s}};
-}
+  return { normPoints, param: { meanX, meanY, s } };
+};
 
 // Denormalize homography
 // where T is the normalization matrix, i.e.
@@ -90,7 +90,7 @@ const _normalizePoints = (coords) => {
 //
 //          [1  0  s*meanX]
 // inv(T) = [0  1  s*meanY]
-// 	    [0  0        s]
+//          [0  0        s]
 //
 // H = inv(Tdst) * Hn * Tsrc
 //
@@ -126,15 +126,15 @@ const _denormalizeHomography = (nH, srcParam, dstParam) => {
   const sMeanY = dstParam.s * dstParam.meanY;
 
   const H = [
-      nH[0] + sMeanX * nH[6], 
-      nH[1] + sMeanX * nH[7],
-      (nH[0] + sMeanX * nH[6]) * -srcParam.meanX + (nH[1] + sMeanX * nH[7]) * -srcParam.meanY + (nH[2] + sMeanX) / srcParam.s,
-      nH[3] + sMeanY * nH[6], 
-      nH[4] + sMeanY * nH[7],
-      (nH[3] + sMeanY * nH[6]) * -srcParam.meanX + (nH[4] + sMeanY * nH[7]) * -srcParam.meanY + (nH[5] + sMeanY) / srcParam.s,
-      dstParam.s * nH[6],
-      dstParam.s * nH[7],
-      dstParam.s * nH[6] * -srcParam.meanX + dstParam.s * nH[7] * -srcParam.meanY + dstParam.s / srcParam.s,
+    nH[0] + sMeanX * nH[6],
+    nH[1] + sMeanX * nH[7],
+    (nH[0] + sMeanX * nH[6]) * -srcParam.meanX + (nH[1] + sMeanX * nH[7]) * -srcParam.meanY + (nH[2] + sMeanX) / srcParam.s,
+    nH[3] + sMeanY * nH[6],
+    nH[4] + sMeanY * nH[7],
+    (nH[3] + sMeanY * nH[6]) * -srcParam.meanX + (nH[4] + sMeanY * nH[7]) * -srcParam.meanY + (nH[5] + sMeanY) / srcParam.s,
+    dstParam.s * nH[6],
+    dstParam.s * nH[7],
+    dstParam.s * nH[6] * -srcParam.meanX + dstParam.s * nH[7] * -srcParam.meanY + dstParam.s / srcParam.s,
   ];
 
   // make H[8] === 1;
@@ -142,8 +142,8 @@ const _denormalizeHomography = (nH, srcParam, dstParam) => {
     H[i] = H[i] / H[8];
   }
   return H;
-}
+};
 
 export {
-  solveHomography
-}
+  solveHomography,
+};

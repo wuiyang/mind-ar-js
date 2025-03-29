@@ -1,13 +1,12 @@
-import {compute as hammingCompute} from './hamming-distance.js';
-import {createRandomizer} from '../utils/randomizer.js';
+import { compute as hammingCompute } from "./hamming-distance.js";
+import { createRandomizer } from "../utils/randomizer.js";
 
 const MIN_FEATURE_PER_NODE = 16;
-const NUM_ASSIGNMENT_HYPOTHESES =  128;
+const NUM_ASSIGNMENT_HYPOTHESES = 128;
 const NUM_CENTERS = 8;
 
-
 const _computeKMedoids = (options) => {
-  const {points, pointIndexes, randomizer} = options;
+  const { points, pointIndexes, randomizer } = options;
 
   const randomPointIndexes = [];
   for (let i = 0; i < pointIndexes.length; i++) {
@@ -19,7 +18,7 @@ const _computeKMedoids = (options) => {
 
   const assignments = [];
   for (let i = 0; i < NUM_ASSIGNMENT_HYPOTHESES; i++) {
-    randomizer.arrayShuffle({arr: randomPointIndexes, sampleSize: NUM_CENTERS});
+    randomizer.arrayShuffle({ arr: randomPointIndexes, sampleSize: NUM_CENTERS });
 
     let sumD = 0;
     const assignment = [];
@@ -27,7 +26,7 @@ const _computeKMedoids = (options) => {
       let bestD = Number.MAX_SAFE_INTEGER;
       for (let k = 0; k < NUM_CENTERS; k++) {
         const centerIndex = pointIndexes[randomPointIndexes[k]];
-        const d = hammingCompute({v1: points[pointIndexes[j]].descriptors, v2: points[centerIndex].descriptors});
+        const d = hammingCompute({ v1: points[pointIndexes[j]].descriptors, v2: points[centerIndex].descriptors });
         if (d < bestD) {
           assignment[j] = randomPointIndexes[k];
           bestD = d;
@@ -43,7 +42,7 @@ const _computeKMedoids = (options) => {
     }
   }
   return assignments[bestAssignmentIndex];
-}
+};
 
 // kmedoids clustering of points, with hamming distance of FREAK descriptor
 //
@@ -53,7 +52,7 @@ const _computeKMedoids = (options) => {
 //   pointIndexes: [], list of int, point indexes
 //   centerPointIndex: int
 // }
-const build = ({points}) => {
+const build = ({ points }) => {
   const pointIndexes = [];
   for (let i = 0; i < points.length; i++) {
     pointIndexes.push(i);
@@ -61,13 +60,13 @@ const build = ({points}) => {
 
   const randomizer = createRandomizer();
 
-  const rootNode = _build({points: points, pointIndexes: pointIndexes, centerPointIndex: null, randomizer});
-  return {rootNode};
-}
+  const rootNode = _build({ points: points, pointIndexes: pointIndexes, centerPointIndex: null, randomizer });
+  return { rootNode };
+};
 
 // recursive build hierarchy clusters
 const _build = (options) => {
-  const {points, pointIndexes, centerPointIndex, randomizer} = options;
+  const { points, pointIndexes, centerPointIndex, randomizer } = options;
 
   let isLeaf = false;
 
@@ -78,7 +77,7 @@ const _build = (options) => {
   const clusters = {};
   if (!isLeaf) {
     // compute clusters
-    const assignment = _computeKMedoids({points, pointIndexes, randomizer});
+    const assignment = _computeKMedoids({ points, pointIndexes, randomizer });
 
     for (let i = 0; i < assignment.length; i++) {
       if (clusters[pointIndexes[assignment[i]]] === undefined) {
@@ -92,8 +91,8 @@ const _build = (options) => {
   }
 
   const node = {
-    centerPointIndex: centerPointIndex
-  }
+    centerPointIndex: centerPointIndex,
+  };
 
   if (isLeaf) {
     node.leaf = true;
@@ -109,12 +108,11 @@ const _build = (options) => {
   node.children = [];
 
   Object.keys(clusters).forEach((centerIndex) => {
-    node.children.push(_build({points: points, pointIndexes: clusters[centerIndex], centerPointIndex: centerIndex, randomizer}));
+    node.children.push(_build({ points: points, pointIndexes: clusters[centerIndex], centerPointIndex: centerIndex, randomizer }));
   });
   return node;
-}
+};
 
 export {
   build,
 };
-

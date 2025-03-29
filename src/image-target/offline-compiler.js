@@ -1,8 +1,8 @@
-import {CompilerBase} from './compiler-base.js'
-import { buildTrackingImageList } from './image-list.js';
-import { extractTrackingFeatures } from './tracker/extract-utils.js';
-import { createCanvas } from 'canvas'
-import './detector/kernels/cpu/index.js'
+import { CompilerBase } from "./compiler-base.js";
+import { buildTrackingImageList } from "./image-list.js";
+import { extractTrackingFeatures } from "./tracker/extract-utils.js";
+import { createCanvas } from "canvas";
+import "./detector/kernels/cpu/index.js";
 
 export class OfflineCompiler extends CompilerBase {
   createProcessCanvas(img) {
@@ -10,9 +10,9 @@ export class OfflineCompiler extends CompilerBase {
     return processCanvas;
   }
 
-  compileTrack({progressCallback, targetImages, basePercent}) {
-    return new Promise((resolve, reject) => {
-      const percentPerImage = (100-basePercent) / targetImages.length;
+  compileTrack({ progressCallback, targetImages, basePercent }) {
+    return new Promise((resolve) => {
+      const percentPerImage = (100 - basePercent) / targetImages.length;
       let percent = 0;
       const list = [];
       for (let i = 0; i < targetImages.length; i++) {
@@ -20,11 +20,11 @@ export class OfflineCompiler extends CompilerBase {
         const imageList = buildTrackingImageList(targetImage);
         const percentPerAction = percentPerImage / imageList.length;
 
-        //console.log("compiling tracking...", i);
-        const trackingData = extractTrackingFeatures(imageList, (index) => {
-          //console.log("done tracking", i, index);
+        // console.log("compiling tracking...", i);
+        const trackingData = extractTrackingFeatures(imageList, () => {
+          // console.log("done tracking", i, index);
           percent += percentPerAction;
-          progressCallback(basePercent+percent);
+          progressCallback(basePercent + percent);
         });
         list.push(trackingData);
       }

@@ -1,4 +1,4 @@
-import { extract } from './extract.js';
+import { extract } from "./extract.js";
 
 export const extractTrackingFeatures = (imageList, doneCallback) => {
   const featureSets = [];
@@ -18,4 +18,4 @@ export const extractTrackingFeatures = (imageList, doneCallback) => {
     doneCallback(i);
   }
   return featureSets;
-}
+};

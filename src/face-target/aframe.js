@@ -1,81 +1,84 @@
-//const {Controller, UI} = window.MINDAR.FACE;
-import {Controller,UI} from './index.js'
+// const {Controller, UI} = window.MINDAR.FACE;
+import { Controller, UI } from "./index.js";
+// eslint-disable-next-line no-undef
 const THREE = AFRAME.THREE;
-const needsDOMRefresh=document.readyState === 'complete'||document.readyState=='interactive';
-//console.log("Registering custom AFRAME stuff. Needs Refresh:",needsDOMRefresh,document.readyState);
-AFRAME.registerSystem('mindar-face-system', {
+// const needsDOMRefresh = document.readyState === "complete" || document.readyState == "interactive";
+// console.log("Registering custom AFRAME stuff. Needs Refresh:",needsDOMRefresh,document.readyState);
+// eslint-disable-next-line no-undef
+AFRAME.registerSystem("mindar-face-system", {
   container: null,
   video: null,
   shouldFaceUser: true,
   lastHasFace: false,
   disableFaceMirror: false,
 
-  init: function() {
+  init: function () {
     this.anchorEntities = [];
     this.faceMeshEntities = [];
   },
 
-  setup: function({showStats, uiLoading, uiScanning, uiError, filterMinCF, filterBeta, disableFaceMirror}) {
-    this.ui = new UI({uiLoading, uiScanning, uiError});
+  setup: function ({ showStats, uiLoading, uiScanning, uiError, filterMinCF, filterBeta, disableFaceMirror }) {
+    this.ui = new UI({ uiLoading, uiScanning, uiError });
     this.filterMinCF = filterMinCF;
     this.filterBeta = filterBeta;
     this.disableFaceMirror = disableFaceMirror;
     this.showStats = showStats;
   },
 
-  registerFaceMesh: function(el) {
-    this.faceMeshEntities.push({el});
+  registerFaceMesh: function (el) {
+    this.faceMeshEntities.push({ el });
   },
 
-  registerAnchor: function(el, anchorIndex) {
-    this.anchorEntities.push({el: el, anchorIndex});
+  registerAnchor: function (el, anchorIndex) {
+    this.anchorEntities.push({ el: el, anchorIndex });
   },
 
-  start: function() {
+  start: function () {
     this.ui.showLoading();
 
     this.container = this.el.sceneEl.parentNode;
 
     if (this.showStats) {
+      // eslint-disable-next-line no-undef
       this.mainStats = new Stats();
-      this.mainStats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
-      this.mainStats.domElement.style.cssText = 'position:absolute;top:0px;left:0px;z-index:999';
+      this.mainStats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+      this.mainStats.domElement.style.cssText = "position:absolute;top:0px;left:0px;z-index:999";
       this.container.appendChild(this.mainStats.domElement);
     }
 
-    //this.__startVideo();
+    // this.__startVideo();
     this._startVideo();
   },
 
-  stop: function() {
+  stop: function () {
     this.pause();
     const tracks = this.video.srcObject.getTracks();
-    tracks.forEach(function(track) {
+    tracks.forEach(function (track) {
       track.stop();
     });
     this.video.remove();
   },
 
-  switchCamera: function() {
+  switchCamera: function () {
     this.shouldFaceUser = !this.shouldFaceUser;
     this.stop();
     this.start();
   },
 
-  pause: function(keepVideo=false) {
+  pause: function (keepVideo = false) {
     if (!keepVideo) {
       this.video.pause();
     }
     this.controller.stopProcessVideo();
   },
 
-  unpause: function() {
+  unpause: function () {
     this.video.play();
     this.controller.processVideo(this.video);
   },
 
   // mock a video with an image
-  __startVideo: function() {
+  __startVideo: function () {
     this.video = document.createElement("img");
     this.video.onload = async () => {
       this.video.videoWidth = this.video.width;
@@ -84,88 +87,88 @@ AFRAME.registerSystem('mindar-face-system', {
       await this._setupAR();
       this._processVideo();
       this.ui.hideLoading();
-    }
-    this.video.style.position = 'absolute'
-    this.video.style.top = '0px'
-    this.video.style.left = '0px'
-    this.video.style.zIndex = '-2'
+    };
+    this.video.style.position = "absolute";
+    this.video.style.top = "0px";
+    this.video.style.left = "0px";
+    this.video.style.zIndex = "-2";
     this.video.src = "./assets/face1.jpeg";
 
     this.container.appendChild(this.video);
   },
 
-  _startVideo: function() {
-    this.video = document.createElement('video');
+  _startVideo: function () {
+    this.video = document.createElement("video");
 
-    this.video.setAttribute('autoplay', '');
-    this.video.setAttribute('muted', '');
-    this.video.setAttribute('playsinline', '');
-    this.video.style.position = 'absolute'
-    this.video.style.top = '0px'
-    this.video.style.left = '0px'
-    this.video.style.zIndex = '-2'
+    this.video.setAttribute("autoplay", "");
+    this.video.setAttribute("muted", "");
+    this.video.setAttribute("playsinline", "");
+    this.video.style.position = "absolute";
+    this.video.style.top = "0px";
+    this.video.style.left = "0px";
+    this.video.style.zIndex = "-2";
     this.container.appendChild(this.video);
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      this.el.emit("arError", {error: 'VIDEO_FAIL'});
+      this.el.emit("arError", { error: "VIDEO_FAIL" });
       this.ui.showCompatibility();
       return;
     }
 
-    navigator.mediaDevices.getUserMedia({audio: false, video: {
-      facingMode: (this.shouldFaceUser? 'user': 'environment'),
-    }}).then((stream) => {
-      this.video.addEventListener( 'loadedmetadata', async () => {
-        this.video.setAttribute('width', this.video.videoWidth);
-        this.video.setAttribute('height', this.video.videoHeight);
+    navigator.mediaDevices.getUserMedia({ audio: false, video: {
+      facingMode: (this.shouldFaceUser ? "user" : "environment"),
+    } }).then((stream) => {
+      this.video.addEventListener("loadedmetadata", async () => {
+        this.video.setAttribute("width", this.video.videoWidth);
+        this.video.setAttribute("height", this.video.videoHeight);
         await this._setupAR();
-	this._processVideo();
-	this.ui.hideLoading();
+        this._processVideo();
+        this.ui.hideLoading();
       });
       this.video.srcObject = stream;
     }).catch((err) => {
       console.log("getUserMedia error", err);
-      this.el.emit("arError", {error: 'VIDEO_FAIL'});
+      this.el.emit("arError", { error: "VIDEO_FAIL" });
     });
   },
 
-  _processVideo: function() {
-    this.controller.onUpdate = ({hasFace, estimateResult}) => {
+  _processVideo: function () {
+    this.controller.onUpdate = ({ hasFace, estimateResult }) => {
       if (this.mainStats) this.mainStats.update();
 
       if (hasFace && !this.lastHasFace) {
-	this.el.emit("targetFound");
+        this.el.emit("targetFound");
       }
       if (!hasFace && this.lastHasFace) {
-	this.el.emit("targetLost");
+        this.el.emit("targetLost");
       }
       this.lastHasFace = hasFace;
 
       if (hasFace) {
-	const {faceMatrix} = estimateResult;
-	for (let i = 0; i < this.anchorEntities.length; i++) {
-	  const landmarkMatrix = this.controller.getLandmarkMatrix(this.anchorEntities[i].anchorIndex);
-	  this.anchorEntities[i].el.updateVisibility(true);
-	  this.anchorEntities[i].el.updateMatrix(landmarkMatrix);
-	}
+        const { faceMatrix } = estimateResult;
+        for (let i = 0; i < this.anchorEntities.length; i++) {
+          const landmarkMatrix = this.controller.getLandmarkMatrix(this.anchorEntities[i].anchorIndex);
+          this.anchorEntities[i].el.updateVisibility(true);
+          this.anchorEntities[i].el.updateMatrix(landmarkMatrix);
+        }
 
-	for (let i = 0; i < this.faceMeshEntities.length; i++) {
-	  this.faceMeshEntities[i].el.updateVisibility(true);
-	  this.faceMeshEntities[i].el.updateMatrix(faceMatrix);
-	}
+        for (let i = 0; i < this.faceMeshEntities.length; i++) {
+          this.faceMeshEntities[i].el.updateVisibility(true);
+          this.faceMeshEntities[i].el.updateMatrix(faceMatrix);
+        }
       } else {
-	for (let i = 0; i < this.anchorEntities.length; i++) {
-	  this.anchorEntities[i].el.updateVisibility(false);
-	}
-	for (let i = 0; i < this.faceMeshEntities.length; i++) {
-	  this.faceMeshEntities[i].el.updateVisibility(false);
-	}
+        for (let i = 0; i < this.anchorEntities.length; i++) {
+          this.anchorEntities[i].el.updateVisibility(false);
+        }
+        for (let i = 0; i < this.faceMeshEntities.length; i++) {
+          this.faceMeshEntities[i].el.updateVisibility(false);
+        }
       }
-    }
+    };
     this.controller.processVideo(this.video);
   },
 
-  _setupAR: async function() {
+  _setupAR: async function () {
     this.controller = new Controller({
       filterMinCF: this.filterMinCF,
       filterBeta: this.filterBeta,
@@ -182,30 +185,30 @@ AFRAME.registerSystem('mindar-face-system', {
     }
 
     this._resize();
-    window.addEventListener('resize', this._resize.bind(this));
+    window.addEventListener("resize", this._resize.bind(this));
     this.el.emit("arReady");
   },
 
-  _resize: function() {
+  _resize: function () {
     const video = this.video;
     const container = this.container;
 
-    if (true) { // only needed if video dimension updated (e.g. when mobile orientation changes)
-      this.video.setAttribute('width', this.video.videoWidth);
-      this.video.setAttribute('height', this.video.videoHeight);
-      this.controller.onInputResized(video);
+    // if (true) { // only needed if video dimension updated (e.g. when mobile orientation changes)
+    this.video.setAttribute("width", this.video.videoWidth);
+    this.video.setAttribute("height", this.video.videoHeight);
+    this.controller.onInputResized(video);
 
-      const {fov, aspect, near, far} = this.controller.getCameraParams();
+    const { fov, aspect, near, far } = this.controller.getCameraParams();
 
-      const cameraEle = this.container.getElementsByTagName("a-camera")[0];
-      const camera = cameraEle.getObject3D('camera');
-      camera.fov = fov;
-      camera.aspect = aspect;
-      camera.near = near;
-      camera.far = far;
-      camera.updateProjectionMatrix();
-      cameraEle.setAttribute('camera', 'active', true);
-    }
+    const cameraEle = this.container.getElementsByTagName("a-camera")[0];
+    const camera = cameraEle.getObject3D("camera");
+    camera.fov = fov;
+    camera.aspect = aspect;
+    camera.near = near;
+    camera.far = far;
+    camera.updateProjectionMatrix();
+    cameraEle.setAttribute("camera", "active", true);
+    // }
 
     let vw, vh; // display css width, height
     const videoRatio = video.videoWidth / video.videoHeight;
@@ -229,36 +232,36 @@ AFRAME.registerSystem('mindar-face-system', {
     sceneEl.style.height = this.video.style.height;
 
     if (this.shouldFaceUser && !this.disableFaceMirror) {
-      video.style.transform = 'scaleX(-1)';
-      //sceneEl.style.transform = 'scaleX(-1)';
+      video.style.transform = "scaleX(-1)";
+      // sceneEl.style.transform = 'scaleX(-1)';
     } else {
-      video.style.transform = 'scaleX(1)';
-      //sceneEl.style.transform = 'scaleX(1)';
+      video.style.transform = "scaleX(1)";
+      // sceneEl.style.transform = 'scaleX(1)';
     }
-
-  }
+  },
 });
 
-AFRAME.registerComponent('mindar-face', {
-  dependencies: ['mindar-face-system'],
+// eslint-disable-next-line no-undef
+AFRAME.registerComponent("mindar-face", {
+  dependencies: ["mindar-face-system"],
 
   schema: {
-    autoStart: {type: 'boolean', default: true},
-    faceOccluder: {type: 'boolean', default: true},
-    uiLoading: {type: 'string', default: 'yes'},
-    uiScanning: {type: 'string', default: 'yes'},
-    uiError: {type: 'string', default: 'yes'},
-    filterMinCF: {type: 'number', default: -1},
-    filterBeta: {type: 'number', default: -1},
-    disableFaceMirror: {type: 'boolean', default: 'false'},
-    showStats: {type: 'boolean', default: false},
+    autoStart: { type: "boolean", default: true },
+    faceOccluder: { type: "boolean", default: true },
+    uiLoading: { type: "string", default: "yes" },
+    uiScanning: { type: "string", default: "yes" },
+    uiError: { type: "string", default: "yes" },
+    filterMinCF: { type: "number", default: -1 },
+    filterBeta: { type: "number", default: -1 },
+    disableFaceMirror: { type: "boolean", default: "false" },
+    showStats: { type: "boolean", default: false },
   },
 
-  init: function() {
-    const arSystem = this.el.sceneEl.systems['mindar-face-system'];
+  init: function () {
+    const arSystem = this.el.sceneEl.systems["mindar-face-system"];
 
     if (this.data.faceOccluder) {
-      const faceOccluderMeshEntity = document.createElement('a-entity');
+      const faceOccluderMeshEntity = document.createElement("a-entity");
       faceOccluderMeshEntity.setAttribute("mindar-face-default-face-occluder", true);
       this.el.sceneEl.appendChild(faceOccluderMeshEntity);
     }
@@ -267,29 +270,30 @@ AFRAME.registerComponent('mindar-face', {
       uiLoading: this.data.uiLoading,
       uiScanning: this.data.uiScanning,
       uiError: this.data.uiError,
-      filterMinCF: this.data.filterMinCF === -1? null: this.data.filterMinCF,
-      filterBeta: this.data.filterBeta === -1? null: this.data.filterBeta,
+      filterMinCF: this.data.filterMinCF === -1 ? null : this.data.filterMinCF,
+      filterBeta: this.data.filterBeta === -1 ? null : this.data.filterBeta,
       disableFaceMirror: this.data.disableFaceMirror,
       showStats: this.data.showStats,
     });
 
     if (this.data.autoStart) {
-      this.el.sceneEl.addEventListener('renderstart', () => {
+      this.el.sceneEl.addEventListener("renderstart", () => {
         arSystem.start();
       });
     }
   },
 });
 
-AFRAME.registerComponent('mindar-face-target', {
-  dependencies: ['mindar-face-system'],
+// eslint-disable-next-line no-undef
+AFRAME.registerComponent("mindar-face-target", {
+  dependencies: ["mindar-face-system"],
 
   schema: {
-    anchorIndex: {type: 'number'},
+    anchorIndex: { type: "number" },
   },
 
-  init: function() {
-    const arSystem = this.el.sceneEl.systems['mindar-face-system'];
+  init: function () {
+    const arSystem = this.el.sceneEl.systems["mindar-face-system"];
     arSystem.registerAnchor(this, this.data.anchorIndex);
 
     const root = this.el.object3D;
@@ -304,28 +308,30 @@ AFRAME.registerComponent('mindar-face-target', {
   updateMatrix(matrix) {
     const root = this.el.object3D;
     root.matrix.set(...matrix);
-  }
+  },
 });
 
-AFRAME.registerComponent('mindar-face-occluder', {
-  init: function() {
-    const root = this.el.object3D;
-    this.el.addEventListener('model-loaded', () => {
-      this.el.getObject3D('mesh').traverse((o) => {
-	if (o.isMesh) {
-	  const material = new THREE.MeshStandardMaterial({
-	    colorWrite: false,
-	  });
-	  o.material = material;
-	}
+// eslint-disable-next-line no-undef
+AFRAME.registerComponent("mindar-face-occluder", {
+  init: function () {
+    // const root = this.el.object3D;
+    this.el.addEventListener("model-loaded", () => {
+      this.el.getObject3D("mesh").traverse((o) => {
+        if (o.isMesh) {
+          const material = new THREE.MeshStandardMaterial({
+            colorWrite: false,
+          });
+          o.material = material;
+        }
       });
     });
   },
 });
 
-AFRAME.registerComponent('mindar-face-default-face-occluder', {
-  init: function() {
-    const arSystem = this.el.sceneEl.systems['mindar-face-system'];
+// eslint-disable-next-line no-undef
+AFRAME.registerComponent("mindar-face-default-face-occluder", {
+  init: function () {
+    const arSystem = this.el.sceneEl.systems["mindar-face-system"];
     arSystem.registerFaceMesh(this);
 
     const root = this.el.object3D;
@@ -342,10 +348,10 @@ AFRAME.registerComponent('mindar-face-default-face-occluder', {
   },
 
   addFaceMesh(faceGeometry) {
-    const material = new THREE.MeshBasicMaterial({colorWrite: false});
-    //const material = new THREE.MeshBasicMaterial({colorWrite: '#CCCCCC'});
+    const material = new THREE.MeshBasicMaterial({ colorWrite: false });
+    // const material = new THREE.MeshBasicMaterial({colorWrite: '#CCCCCC'});
     const mesh = new THREE.Mesh(faceGeometry, material);
-    this.el.setObject3D('mesh', mesh);
+    this.el.setObject3D("mesh", mesh);
   },
 });
 
@@ -353,7 +359,7 @@ AFRAME.registerComponent('mindar-face-default-face-occluder', {
 This is a hack.
 If the user's browser has cached A-Frame,
 then A-Frame will process the webpage *before* the system and components get registered.
-Resulting in a blank page. This happens because module loading is deferred. 
+Resulting in a blank page. This happens because module loading is deferred.
 */
 /* if(needsDOMRefresh){
   console.log("mindar-face-aframe::Refreshing DOM...")

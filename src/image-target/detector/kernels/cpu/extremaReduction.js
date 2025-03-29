@@ -1,7 +1,7 @@
-import * as FakeShader from './fakeShader.js';
-function GetProgram(outHeight,outWidth) {
+import * as FakeShader from "./fakeShader.js";
+function GetProgram(outHeight, outWidth) {
   const kernel = {
-    variableNames: ['extrema'],
+    variableNames: ["extrema"],
     outputShape: [outHeight, outWidth],
     userCode: function () {
       const coords = this.getOutputCoords();
@@ -14,12 +14,10 @@ function GetProgram(outHeight,outWidth) {
       if (this.getExtrema(y + 1, x) != 0.0) {
         location = 1.0;
         values = this.getExtrema(y + 1, x);
-      }
-      else if (this.getExtrema(y, x + 1) != 0.0) {
+      } else if (this.getExtrema(y, x + 1) != 0.0) {
         location = 2.0;
         values = this.getExtrema(y, x + 1);
-      }
-      else if (this.getExtrema(y + 1, x + 1) != 0.0) {
+      } else if (this.getExtrema(y + 1, x + 1) != 0.0) {
         location = 3.0;
         values = this.getExtrema(y + 1, x + 1);
       }
@@ -29,12 +27,11 @@ function GetProgram(outHeight,outWidth) {
       } else {
         this.setOutput(location * 1000.0 + values);
       }
-    }
+    },
 
-  }
+  };
   return kernel;
 }
-
 
 export const extremaReduction = (args) => {
   const { extremasResultT } = args.inputs;
@@ -44,13 +41,13 @@ export const extremaReduction = (args) => {
   const extremaWidth = extremasResultT.shape[1];
   const outHeight = Math.floor(extremaHeight / 2.0);
   const outWidth = Math.floor(extremaWidth / 2.0);
-  const program=GetProgram(outHeight,outWidth);
+  const program = GetProgram(outHeight, outWidth);
 
- return FakeShader.runCode(backend,program,[extremasResultT],extremasResultT.dtype);
-}
+  return FakeShader.runCode(backend, program, [extremasResultT], extremasResultT.dtype);
+};
 
-export const extremaReductionConfig = {//: KernelConfig
+export const extremaReductionConfig = { // : KernelConfig
   kernelName: "ExtremaReduction",
-  backendName: 'cpu',
-  kernelFunc: extremaReduction,// as {} as KernelFunc,
+  backendName: "cpu",
+  kernelFunc: extremaReduction, // as {} as KernelFunc,
 };
