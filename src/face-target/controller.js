@@ -90,7 +90,9 @@ class Controller {
 
     if (results.faceLandmarks.length === 0) {
       this.lastEstimateResult = null;
-      this.onUpdate({ hasFace: false });
+      if (this.onUpdate) {
+        this.onUpdate({ hasFace: false });
+      }
 
       for (let i = 0; i < this.landmarkFilters.length; i++) {
         this.landmarkFilters[i].reset();

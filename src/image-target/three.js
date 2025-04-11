@@ -15,6 +15,7 @@ export class MindARThree {
     container, imageTargetSrc, maxTrack, uiLoading = "yes", uiScanning = "yes", uiError = "yes",
     filterMinCF = null, filterBeta = null, warmupTolerance = null, missTolerance = null,
     userDeviceId = null, environmentDeviceId = null,
+    onFrameComplete = null,
   }) {
     this.container = container;
     this.imageTargetSrc = imageTargetSrc;
@@ -26,6 +27,7 @@ export class MindARThree {
     this.ui = new UI({ uiLoading, uiScanning, uiError });
     this.userDeviceId = userDeviceId;
     this.environmentDeviceId = environmentDeviceId;
+    this.onFrameComplete = onFrameComplete;
 
     this.shouldFaceUser = false;
 
@@ -204,6 +206,8 @@ export class MindARThree {
           } else {
             this.ui.showScanning();
           }
+        } else if (data.type === "processDone") {
+          this.onFrameComplete && this.onFrameComplete();
         }
       },
     });

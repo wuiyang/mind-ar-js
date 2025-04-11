@@ -9,6 +9,7 @@ const THREE = { BufferGeometry, BufferAttribute };
 export class MindARThree {
   constructor({ container, uiLoading = "yes", uiScanning = "yes", uiError = "yes", filterMinCF = null, filterBeta = null,
     userDeviceId = null, environmentDeviceId = null, disableFaceMirror = false,
+    onFrameComplete = null,
   }) {
     this.container = container;
     this.ui = new UI({ uiLoading, uiScanning, uiError });
@@ -27,6 +28,7 @@ export class MindARThree {
     this.camera = new PerspectiveCamera();
     this.userDeviceId = userDeviceId;
     this.environmentDeviceId = environmentDeviceId;
+    this.onFrameComplete = onFrameComplete;
 
     this.anchors = [];
     this.faceMeshes = [];
@@ -191,6 +193,8 @@ export class MindARThree {
       } else {
         this.latestEstimate = null;
       }
+
+      this.onFrameComplete && this.onFrameComplete();
     };
     this._resize();
 
