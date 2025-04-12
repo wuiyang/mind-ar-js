@@ -49,6 +49,7 @@ export class MindARThree {
   }
 
   async start() {
+    this._resetAnchors();
     this.ui.showLoading();
     await this._startVideo();
     await this._startAR();
@@ -61,6 +62,28 @@ export class MindARThree {
       track.stop();
     });
     this.video.remove();
+  }
+
+  pause() {
+    this.video?.pause();
+    this.controller?.pauseProcessVideo();
+  }
+
+  unpause() {
+    this._resetAnchors();
+    this.video?.play();
+    this.resize();
+    this.controller?.unpauseProcessVideo(this.video);
+  }
+
+  _resetAnchors() {
+    for (const anchor of this.anchors) {
+      anchor.visible = false;
+    }
+  }
+
+  updateMaxTrack(maxTrack) {
+    this.controller.maxTrack = this.maxTrack = maxTrack;
   }
 
   switchCamera() {

@@ -32,6 +32,7 @@ class Controller {
     this.processingVideo = false;
     this.interestedTargetIndex = -1;
     this.trackingStates = [];
+    this._isLastPaused = false;
 
     const near = 10;
     const far = 100000;
@@ -163,8 +164,6 @@ class Controller {
   processVideo(input) {
     if (this.processingVideo) return;
 
-    this.processingVideo = true;
-
     this.trackingStates = [];
     for (let i = 0; i < this.markerDimensions.length; i++) {
       this.trackingStates.push({
@@ -177,6 +176,14 @@ class Controller {
       });
       // console.log("filterMinCF", this.filterMinCF, this.filterBeta);
     }
+
+    this._startVideoProcessor(input);
+  }
+
+  _startVideoProcessor(input) {
+    this._isLastPaused = false;
+    this.processingVideo = true;
+
     runOnEveryFrame(
       () => this._startProcessing(input),
       () => this.processingVideo,
@@ -278,7 +285,22 @@ class Controller {
   }
 
   stopProcessVideo() {
+    this.pauseProcessVideo();
+    this._isLastPaused = false;
+  }
+
+  pauseProcessVideo() {
     this.processingVideo = false;
+    this._isLastPaused = true;
+  }
+
+  unpauseProcessVideo(input) {
+    if (this._isLastPaused) {
+      this._startVideoProcessor(input);
+    } else {
+      console.warn("You cannot unpause process video from empty state! Auto calling processVideo instead...");
+      this.processVideo(input);
+    }
   }
 
   async detect(input) {
