@@ -1,6 +1,23 @@
 # Changelog
 
 
+## v1.4.0
+
+[compare changes](https://github.com/wuiyang/mind-ar-js/compare/v1.3.0...v1.4.0)
+
+### 🚀 Enhancements
+
+- Added pause and unpause scene ([4812f63](https://github.com/wuiyang/mind-ar-js/commit/4812f63))
+
+### 🏡 Chore
+
+- **release:** V1.3.0 ([1f07fe5](https://github.com/wuiyang/mind-ar-js/commit/1f07fe5))
+
+### ❤️ Contributors
+
+- Wuiyang <wuiyang@live.com>
+- Github Actions ([@actions](https://github.com/actions))
+
 ## v1.3.0
 
 [compare changes](https://github.com/wuiyang/mind-ar-js/compare/v1.2.6...v1.3.0)
